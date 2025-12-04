@@ -73,3 +73,7 @@ select:focus {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--border-color);
 }
+
+.dbms-tooltip-container:hover .dbms-tooltip {
+  display: block !important;
+}
