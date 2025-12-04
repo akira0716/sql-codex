@@ -68,7 +68,7 @@ export const FunctionEditor: React.FC = () => {
                     </button>
                     <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{isEdit ? 'Edit Function' : 'New Function'}</h1>
                 </div>
-                <div style={{ display: 'flex', gap: '1rem' }}>
+                <div className="editor-buttons" style={{ display: 'flex', gap: '1rem' }}>
                     {isEdit && (
                         <button onClick={handleDelete} style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <Trash2 size={20} />

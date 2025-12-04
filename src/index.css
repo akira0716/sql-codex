@@ -77,3 +77,33 @@ select:focus {
 .dbms-tooltip-container:hover .dbms-tooltip {
   display: block !important;
 }
+
+/* Mobile: hide sidebar only on editor pages */
+@media (max-width: 768px) {
+  .sidebar-hide-mobile {
+    display: none !important;
+  }
+
+  .search-desktop {
+    display: none !important;
+  }
+
+  .search-mobile {
+    display: flex !important;
+  }
+
+  .editor-buttons {
+    flex-direction: column !important;
+  }
+}
+
+/* Desktop: show desktop search */
+@media (min-width: 769px) {
+  .search-desktop {
+    display: block !important;
+  }
+
+  .search-mobile {
+    display: none !important;
+  }
+}

@@ -7,10 +7,13 @@ export const Layout: React.FC = () => {
 
     const isActive = (path: string) => location.pathname === path;
 
+    // Hide sidebar on mobile for new/edit pages only
+    const isEditorPage = location.pathname === '/new' || location.pathname.startsWith('/edit');
+
     return (
         <div style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
             {/* Sidebar */}
-            <nav style={{
+            <nav className={isEditorPage ? 'sidebar sidebar-hide-mobile' : 'sidebar'} style={{
                 width: '64px',
                 backgroundColor: 'var(--bg-secondary)',
                 borderRight: '1px solid var(--border-color)',

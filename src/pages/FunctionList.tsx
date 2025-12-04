@@ -8,6 +8,7 @@ import { Modal } from '../components/Modal';
 export const FunctionList: React.FC = () => {
     const [search, setSearch] = useState('');
     const [selectedFunction, setSelectedFunction] = useState<SQLFunction | null>(null);
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
     const navigate = useNavigate();
 
     const functions = useLiveQuery(async () => {
@@ -39,18 +40,47 @@ export const FunctionList: React.FC = () => {
 
     return (
         <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-            <header style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <header style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
                 <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>Library</h1>
-                <div style={{ position: 'relative', width: '300px' }}>
+
+                {/* Desktop Search - inline */}
+                <div className="search-desktop" style={{ position: 'relative', width: '300px' }}>
                     <Search size={18} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
                     <input
                         type="text"
-                        placeholder="Search functions, tags..."
+                        placeholder="Search..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         style={{ width: '100%', paddingLeft: '36px' }}
                     />
                 </div>
+
+                {/* Mobile Search - icon button */}
+                <button
+                    className="search-mobile"
+                    onClick={() => setIsSearchOpen(true)}
+                    style={{
+                        padding: '0.75rem',
+                        borderRadius: '8px',
+                        backgroundColor: 'var(--bg-tertiary)',
+                        color: 'var(--text-secondary)',
+                        display: 'none',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        transition: 'background-color 0.2s, color 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--accent-primary)';
+                        e.currentTarget.style.color = 'white';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+                        e.currentTarget.style.color = 'var(--text-secondary)';
+                    }}
+                    title="Search"
+                >
+                    <Search size={20} />
+                </button>
             </header>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
@@ -267,6 +297,103 @@ export const FunctionList: React.FC = () => {
                         </div>
                     </div>
                 )}
+            </Modal>
+
+            {/* Search Modal */}
+            <Modal
+                isOpen={isSearchOpen}
+                onClose={() => {
+                    setIsSearchOpen(false);
+                    setSearch('');
+                }}
+                title="Search"
+            >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>
+                        関数名、DBMS、タグで検索できます
+                    </p>
+                    <div style={{ position: 'relative' }}>
+                        <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                        <input
+                            type="text"
+                            placeholder="検索..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            autoFocus
+                            style={{
+                                width: '100%',
+                                padding: '0.75rem 0.75rem 0.75rem 40px',
+                                fontSize: '1rem'
+                            }}
+                        />
+                    </div>
+
+                    {search && (
+                        <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                            {functions?.filter(f =>
+                                f.name.toLowerCase().includes(search.toLowerCase()) ||
+                                f.tags.some(t => t.toLowerCase().includes(search.toLowerCase())) ||
+                                f.dbms.some(d => d.toLowerCase().includes(search.toLowerCase()))
+                            ).map(func => (
+                                <div
+                                    key={func.id}
+                                    onClick={() => {
+                                        setSelectedFunction(func);
+                                        setIsSearchOpen(false);
+                                        setSearch('');
+                                    }}
+                                    style={{
+                                        padding: '1rem',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        marginBottom: '0.5rem',
+                                        backgroundColor: 'var(--bg-tertiary)',
+                                        border: '1px solid var(--border-color)',
+                                        transition: 'border-color 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.borderColor = 'var(--accent-primary)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.borderColor = 'var(--border-color)';
+                                    }}
+                                >
+                                    <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>{func.name}</div>
+                                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                        {func.dbms.slice(0, 3).map(d => (
+                                            <span key={d} style={{
+                                                fontSize: '0.75rem',
+                                                padding: '2px 6px',
+                                                borderRadius: '4px',
+                                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                                color: 'var(--accent-primary)'
+                                            }}>
+                                                {d}
+                                            </span>
+                                        ))}
+                                        {func.tags.slice(0, 2).map(tag => (
+                                            <span key={tag} style={{
+                                                fontSize: '0.75rem',
+                                                color: 'var(--text-secondary)'
+                                            }}>
+                                                #{tag}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                            {functions?.filter(f =>
+                                f.name.toLowerCase().includes(search.toLowerCase()) ||
+                                f.tags.some(t => t.toLowerCase().includes(search.toLowerCase())) ||
+                                f.dbms.some(d => d.toLowerCase().includes(search.toLowerCase()))
+                            ).length === 0 && (
+                                    <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem' }}>
+                                        No results found
+                                    </div>
+                                )}
+                        </div>
+                    )}
+                </div>
             </Modal>
         </div>
     );
