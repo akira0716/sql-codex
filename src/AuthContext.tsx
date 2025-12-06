@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from './supabase';
 import type { User } from '@supabase/supabase-js';
+import { db } from './db';
 
 interface AuthContextType {
     user: User | null;
@@ -40,8 +41,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
     };
 
+
+
     const signOut = async () => {
+        // Clear local data first to ensure privacy even if auth signout fails or redirects
+        await Promise.all([
+            db.functions.clear(),
+            db.dbms_options.clear(),
+            db.tag_options.clear()
+        ]);
+
         await supabase.auth.signOut();
+        window.location.reload(); // Force reload to clear in-memory state
     };
 
     const value = {

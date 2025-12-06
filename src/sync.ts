@@ -1,17 +1,27 @@
 import { db } from './db';
 import { supabase } from './supabase';
 
+let isSyncing = false;
+
 export async function syncData() {
+    if (isSyncing) {
+        console.log('Sync already in progress, skipping...');
+        return { success: true };
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
     try {
+        isSyncing = true;
         await syncFunctions(user.id);
         await syncOptions(user.id);
         return { success: true };
     } catch (error) {
         console.error('Sync failed:', error);
         return { success: false, error };
+    } finally {
+        isSyncing = false;
     }
 }
 
@@ -83,17 +93,33 @@ async function syncFunctions(userId: string) {
             });
         } else {
             // New item from cloud
-            await db.functions.add({
-                cloud_id: cf.id,
-                name: cf.name,
-                description: cf.description || '',
-                usage: cf.usage || '',
-                dbms: cf.dbms || [],
-                tags: cf.tags || [],
-                is_deleted: cf.is_deleted,
-                createdAt: new Date(cf.created_at),
-                updatedAt: new Date(cf.updated_at)
-            });
+            // Double check existence in DB to prevent race conditions during parallel syncs
+            const exists = await db.functions.where('cloud_id').equals(cf.id).first();
+            if (!exists) {
+                await db.functions.add({
+                    cloud_id: cf.id,
+                    name: cf.name,
+                    description: cf.description || '',
+                    usage: cf.usage || '',
+                    dbms: cf.dbms || [],
+                    tags: cf.tags || [],
+                    is_deleted: cf.is_deleted,
+                    createdAt: new Date(cf.created_at),
+                    updatedAt: new Date(cf.updated_at)
+                });
+            } else {
+                // Determine if we should update the existing record that we missed in the initial map look up
+                // For safety, let's update it to match cloud if it exists
+                await db.functions.update(exists.id!, {
+                    name: cf.name,
+                    description: cf.description || '',
+                    usage: cf.usage || '',
+                    dbms: cf.dbms || [],
+                    tags: cf.tags || [],
+                    is_deleted: cf.is_deleted,
+                    updatedAt: new Date(cf.updated_at)
+                });
+            }
         }
     }
 }

@@ -12,6 +12,10 @@ function App() {
   const { user } = useAuth();
 
   useEffect(() => {
+    if (user) {
+      syncData();
+    }
+
     const handleOnline = () => {
       console.log('Network recovered. Attempting sync...');
       if (user) {
