@@ -12,6 +12,7 @@ export const Settings: React.FC = () => {
     const [saved, setSaved] = useState(false);
     const [user, setUser] = useState<User | null>(null);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     // Fetch existing options
     const dbmsOptions = useLiveQuery(() => db.dbms_options.toArray());
@@ -21,10 +22,12 @@ export const Settings: React.FC = () => {
     useEffect(() => {
         supabase.auth.getUser().then(({ data: { user } }) => {
             setUser(user);
+            setIsLoading(false);
         });
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setUser(session?.user ?? null);
+            setIsLoading(false);
         });
 
         return () => subscription.unsubscribe();
@@ -109,9 +112,14 @@ export const Settings: React.FC = () => {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                 {/* Account Section */}
+                {/* Account Section */}
                 <section style={{ backgroundColor: 'var(--bg-secondary)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                     <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>Account & Sync</h2>
-                    {user ? (
+                    {isLoading ? (
+                        <div style={{ padding: '1rem', display: 'flex', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                            <RefreshCw className="spin" />
+                        </div>
+                    ) : user ? (
                         <div>
                             <p style={{ marginBottom: '1rem', color: 'var(--text-secondary)' }}>
                                 Logged in as: <span style={{ color: 'var(--text-primary)' }}>{user.email}</span>
