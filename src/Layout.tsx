@@ -20,7 +20,13 @@ export const Layout: React.FC = () => {
     };
 
     return (
-        <div style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
+        <div style={{
+            display: 'flex',
+            height: '100svh', // Using svh is safer for mobile (ignores dynamic UI expansion)
+            width: '100vw',
+            overflow: 'hidden',
+            paddingBottom: 'env(safe-area-inset-bottom)' // Handle safe area for iPhone X+ / Android Gestures
+        }}>
             {/* Sidebar */}
             <nav className={isEditorPage ? 'sidebar sidebar-hide-mobile' : 'sidebar'} style={{
                 width: '64px',

@@ -17,6 +17,11 @@
   padding: 0;
 }
 
+html, body {
+  height: 100%;
+  overflow: hidden; /* Prevent body scroll, handle scroll in app container */
+}
+
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
