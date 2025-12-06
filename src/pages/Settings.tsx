@@ -36,7 +36,6 @@ export const Settings: React.FC = () => {
         setIsSyncing(true);
         await syncData();
         setIsSyncing(false);
-        alert('Sync completed!');
     };
 
     const handleSave = async () => {

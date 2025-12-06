@@ -1,4 +1,4 @@
-import { db, type SQLFunction, type DBMSOption, type TagOption } from './db';
+import { db } from './db';
 import { supabase } from './supabase';
 
 export async function syncData() {
@@ -86,15 +86,32 @@ async function syncOptions(userId: string) {
         // Push missing local to cloud
         const missingInCloud = localDbms.filter(l => !l.cloud_id);
         for (const l of missingInCloud) {
-            const { data } = await supabase.from('dbms_options').insert({ name: l.name, user_id: userId }).select().single();
-            if (data) await db.dbms_options.update(l.id!, { cloud_id: data.id });
+            // Check if exists by name to prevent duplicates
+            const existing = cloudDbms.find(c => c.name === l.name);
+            if (existing) {
+                await db.dbms_options.update(l.id!, { cloud_id: existing.id });
+            } else {
+                const { data } = await supabase.from('dbms_options').insert({ name: l.name, user_id: userId }).select().single();
+                if (data) await db.dbms_options.update(l.id!, { cloud_id: data.id });
+            }
         }
 
         // Pull missing cloud to local
         const localCloudIds = new Set(localDbms.map(l => l.cloud_id).filter(Boolean));
+        // Also check by name to prevent local duplicates if name matches but no cloud_id yet (edge case)
+        const localNames = new Set(localDbms.map(l => l.name));
+
         const missingInLocal = cloudDbms.filter(c => !localCloudIds.has(c.id));
         for (const c of missingInLocal) {
-            await db.dbms_options.add({ cloud_id: c.id, name: c.name });
+            if (!localNames.has(c.name)) {
+                await db.dbms_options.add({ cloud_id: c.id, name: c.name });
+            } else {
+                // If local has name but no cloud_id, update it
+                const localMatch = localDbms.find(l => l.name === c.name);
+                if (localMatch && !localMatch.cloud_id) {
+                    await db.dbms_options.update(localMatch.id!, { cloud_id: c.id });
+                }
+            }
         }
     }
 
@@ -106,15 +123,30 @@ async function syncOptions(userId: string) {
         // Push missing local to cloud
         const missingInCloud = localTags.filter(l => !l.cloud_id);
         for (const l of missingInCloud) {
-            const { data } = await supabase.from('tag_options').insert({ name: l.name, user_id: userId }).select().single();
-            if (data) await db.tag_options.update(l.id!, { cloud_id: data.id });
+            // Check if exists by name
+            const existing = cloudTags.find(c => c.name === l.name);
+            if (existing) {
+                await db.tag_options.update(l.id!, { cloud_id: existing.id });
+            } else {
+                const { data } = await supabase.from('tag_options').insert({ name: l.name, user_id: userId }).select().single();
+                if (data) await db.tag_options.update(l.id!, { cloud_id: data.id });
+            }
         }
 
         // Pull missing cloud to local
         const localCloudIds = new Set(localTags.map(l => l.cloud_id).filter(Boolean));
+        const localNames = new Set(localTags.map(l => l.name));
+
         const missingInLocal = cloudTags.filter(c => !localCloudIds.has(c.id));
         for (const c of missingInLocal) {
-            await db.tag_options.add({ cloud_id: c.id, name: c.name });
+            if (!localNames.has(c.name)) {
+                await db.tag_options.add({ cloud_id: c.id, name: c.name });
+            } else {
+                const localMatch = localTags.find(l => l.name === c.name);
+                if (localMatch && !localMatch.cloud_id) {
+                    await db.tag_options.update(localMatch.id!, { cloud_id: c.id });
+                }
+            }
         }
     }
 }

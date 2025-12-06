@@ -4,6 +4,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { Save, ArrowLeft, Trash2 } from 'lucide-react';
 import { MultiSelect } from '../components/MultiSelect';
+import { useAuth } from '../AuthContext';
+import { syncData } from '../sync';
 
 export const FunctionEditor: React.FC = () => {
     const { id } = useParams();
@@ -16,6 +18,9 @@ export const FunctionEditor: React.FC = () => {
 
     const [selectedDbms, setSelectedDbms] = useState<string[]>([]);
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+    // Auth context
+    const { user } = useAuth();
 
     // Fetch options from DB
     const dbmsOptionsData = useLiveQuery(() => db.dbms_options.toArray());
@@ -55,6 +60,11 @@ export const FunctionEditor: React.FC = () => {
                 ...data,
                 createdAt: new Date(),
             });
+        }
+
+        // Auto sync if logged in
+        if (user) {
+            syncData(); // Fire and forget, don't await to block navigation
         }
         navigate('/');
     };
