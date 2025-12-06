@@ -2,36 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { Save, LogIn, LogOut, RefreshCw } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
-import { supabase } from '../supabase';
 import { syncData } from '../sync';
-import type { User } from '@supabase/supabase-js';
+import { useAuth } from '../AuthContext';
 
 export const Settings: React.FC = () => {
     const [dbmsInput, setDbmsInput] = useState('');
     const [tagsInput, setTagsInput] = useState('');
     const [saved, setSaved] = useState(false);
-    const [user, setUser] = useState<User | null>(null);
     const [isSyncing, setIsSyncing] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
+
+    // Get auth state from context
+    const { user, loading: authLoading, signInWithGoogle, signOut } = useAuth();
 
     // Fetch existing options
     const dbmsOptions = useLiveQuery(() => db.dbms_options.toArray());
     const tagOptions = useLiveQuery(() => db.tag_options.toArray());
-
-    // Check auth status
-    useEffect(() => {
-        supabase.auth.getUser().then(({ data: { user } }) => {
-            setUser(user);
-            setIsLoading(false);
-        });
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user ?? null);
-            setIsLoading(false);
-        });
-
-        return () => subscription.unsubscribe();
-    }, []);
 
     // Initialize inputs when data is loaded
     useEffect(() => {
@@ -45,19 +30,6 @@ export const Settings: React.FC = () => {
             setTagsInput(tagOptions.map(o => o.name).join(', '));
         }
     }, [tagOptions]);
-
-    const handleLogin = async () => {
-        await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: window.location.origin
-            }
-        });
-    };
-
-    const handleLogout = async () => {
-        await supabase.auth.signOut();
-    };
 
     const handleSync = async () => {
         if (!user) return;
@@ -115,7 +87,7 @@ export const Settings: React.FC = () => {
                 {/* Account Section */}
                 <section style={{ backgroundColor: 'var(--bg-secondary)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                     <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>Account & Sync</h2>
-                    {isLoading ? (
+                    {authLoading ? (
                         <div style={{ padding: '1rem', display: 'flex', justifyContent: 'center', color: 'var(--text-secondary)' }}>
                             <RefreshCw className="spin" />
                         </div>
@@ -143,7 +115,7 @@ export const Settings: React.FC = () => {
                                     {isSyncing ? 'Syncing...' : 'Sync Now'}
                                 </button>
                                 <button
-                                    onClick={handleLogout}
+                                    onClick={() => signOut()}
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',
@@ -165,7 +137,7 @@ export const Settings: React.FC = () => {
                                 Sign in to sync your data to the cloud.
                             </p>
                             <button
-                                onClick={handleLogin}
+                                onClick={() => signInWithGoogle()}
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
