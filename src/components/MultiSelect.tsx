@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Check, ChevronDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface MultiSelectProps {
     options: string[];
@@ -55,7 +56,8 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({ options, value, onChan
                     display: 'flex',
                     flexWrap: 'wrap',
                     gap: '0.5rem',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    transition: 'border-color 0.2s'
                 }}
             >
                 {value.length === 0 && (
@@ -63,94 +65,127 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({ options, value, onChan
                 )}
 
                 {value.map(v => (
-                    <span key={v} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        color: 'var(--accent-primary)',
-                        padding: '2px 8px',
-                        borderRadius: '12px',
-                        fontSize: '0.9rem'
-                    }}>
+                    <motion.span
+                        key={v}
+                        layout
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0.8, opacity: 0 }}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            color: 'var(--accent-primary)',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontSize: '0.9rem'
+                        }}
+                    >
                         {v}
                         <X
                             size={14}
                             style={{ cursor: 'pointer' }}
                             onClick={(e) => removeOption(e, v)}
                         />
-                    </span>
+                    </motion.span>
                 ))}
 
                 <div style={{ marginLeft: 'auto', color: 'var(--text-secondary)' }}>
-                    <ChevronDown size={16} />
+                    <motion.div
+                        animate={{ rotate: isOpen ? 180 : 0 }}
+                        transition={{ duration: 0.2 }}
+                    >
+                        <ChevronDown size={16} />
+                    </motion.div>
                 </div>
             </div>
 
-            {isOpen && (
-                <div style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
-                    marginTop: '4px',
-                    backgroundColor: 'var(--bg-tertiary)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '4px',
-                    zIndex: 50,
-                    maxHeight: '200px',
-                    overflowY: 'auto',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                }}>
-                    <input
-                        type="text"
-                        value={filter}
-                        onChange={(e) => setFilter(e.target.value)}
-                        placeholder="Filter options..."
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10, height: 0 }}
+                        animate={{ opacity: 1, y: 0, height: 'auto' }}
+                        exit={{ opacity: 0, y: -10, height: 0 }}
+                        transition={{ duration: 0.2 }}
                         style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: 'none',
-                            borderBottom: '1px solid var(--border-color)',
-                            backgroundColor: 'transparent',
-                            outline: 'none',
-                            color: 'var(--text-primary)'
+                            position: 'absolute',
+                            top: '100%',
+                            left: 0,
+                            right: 0,
+                            marginTop: '4px',
+                            backgroundColor: 'var(--bg-tertiary)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '4px',
+                            zIndex: 50,
+                            maxHeight: '250px', // Increased slightly to accommodate header
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            overflow: 'hidden' // Container clip
                         }}
-                        onClick={(e) => e.stopPropagation()}
-                    />
-
-                    {filteredOptions.length === 0 ? (
-                        <div style={{ padding: '0.5rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-                            No options found
-                        </div>
-                    ) : (
-                        filteredOptions.map(option => (
-                            <div
-                                key={option}
-                                onClick={() => toggleOption(option)}
+                    >
+                        {/* Sticky Header */}
+                        <div style={{ flexShrink: 0, borderBottom: '1px solid var(--border-color)' }}>
+                            <input
+                                type="text"
+                                value={filter}
+                                onChange={(e) => setFilter(e.target.value)}
+                                placeholder="Filter options..."
                                 style={{
+                                    width: '100%',
                                     padding: '0.5rem',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    backgroundColor: value.includes(option) ? 'rgba(59, 130, 246, 0.05)' : 'transparent',
-                                    color: value.includes(option) ? 'var(--accent-primary)' : 'var(--text-primary)'
+                                    border: 'none',
+                                    backgroundColor: 'transparent',
+                                    outline: 'none',
+                                    color: 'var(--text-primary)'
                                 }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = value.includes(option) ? 'rgba(59, 130, 246, 0.05)' : 'transparent';
-                                }}
-                            >
-                                {option}
-                                {value.includes(option) && <Check size={16} />}
-                            </div>
-                        ))
-                    )}
-                </div>
-            )}
+                                onClick={(e) => e.stopPropagation()}
+                                autoFocus
+                            />
+                        </div>
+
+                        {/* Scrollable Content */}
+                        <div style={{
+                            overflowY: 'auto',
+                            overscrollBehavior: 'contain', // Prevents parent scroll
+                            flex: 1
+                        }}>
+                            {filteredOptions.length === 0 ? (
+                                <div style={{ padding: '0.5rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
+                                    No options found
+                                </div>
+                            ) : (
+                                filteredOptions.map(option => (
+                                    <div
+                                        key={option}
+                                        onClick={() => toggleOption(option)}
+                                        style={{
+                                            padding: '0.5rem',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            backgroundColor: value.includes(option) ? 'rgba(59, 130, 246, 0.05)' : 'transparent',
+                                            color: value.includes(option) ? 'var(--accent-primary)' : 'var(--text-primary)',
+                                            transition: 'background-color 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.backgroundColor = value.includes(option) ? 'rgba(59, 130, 246, 0.05)' : 'transparent';
+                                        }}
+                                    >
+                                        {option}
+                                        {value.includes(option) && <Check size={16} />}
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
