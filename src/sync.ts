@@ -32,6 +32,7 @@ async function syncFunctions(userId: string) {
             usage: f.usage,
             dbms: f.dbms,
             tags: f.tags,
+            is_deleted: !!f.is_deleted,
             created_at: f.createdAt.toISOString(),
             updated_at: f.updatedAt.toISOString(),
             user_id: userId
@@ -42,111 +43,133 @@ async function syncFunctions(userId: string) {
         }
     }
 
-    // 3. Push Local -> Cloud (Updates)
-    // For simplicity, we assume local edits are significant. 
-    // real sync needs timestamp comparison
+    // 3. Push Local -> Cloud (Updates including Soft Deletes)
     const existingLocalFunctions = localFunctions.filter(f => f.cloud_id);
     for (const f of existingLocalFunctions) {
-        // Find corresponding cloud item to check timestamp? 
-        // For now, let's just push local state to cloud to ensure cloud matches local
         await supabase.from('functions').update({
             name: f.name,
             description: f.description,
             usage: f.usage,
             dbms: f.dbms,
             tags: f.tags,
+            is_deleted: !!f.is_deleted,
             updated_at: f.updatedAt.toISOString()
         }).eq('id', f.cloud_id);
     }
 
-    // 4. Pull Cloud -> Local (New Items from other devices)
-    const localCloudIds = new Set(localFunctions.map(f => f.cloud_id).filter(Boolean));
-    const newCloudFunctions = cloudFunctions.filter(f => !localCloudIds.has(f.id));
+    // 4. Pull Cloud -> Local
+    const localMap = new Map(localFunctions.map(f => [f.cloud_id, f]));
 
-    for (const f of newCloudFunctions) {
-        await db.functions.add({
-            cloud_id: f.id,
-            name: f.name,
-            description: f.description || '',
-            usage: f.usage || '',
-            dbms: f.dbms || [],
-            tags: f.tags || [],
-            createdAt: new Date(f.created_at),
-            updatedAt: new Date(f.updated_at)
-        });
+    for (const cf of cloudFunctions) {
+        const localFunc = localMap.get(cf.id);
+
+        if (localFunc) {
+            // Update existing local item
+            // ZOMBIE PROTECTION: If local is deleted, ignore cloud update (unless cloud is also deleted, then it matches)
+            if (localFunc.is_deleted && !cf.is_deleted) {
+                // Ignore ghost update
+                continue;
+            }
+
+            // Otherwise apply update from cloud (latest wins or merging logic - here simply applying cloud)
+            await db.functions.update(localFunc.id!, {
+                name: cf.name,
+                description: cf.description || '',
+                usage: cf.usage || '',
+                dbms: cf.dbms || [],
+                tags: cf.tags || [],
+                is_deleted: cf.is_deleted,
+                updatedAt: new Date(cf.updated_at)
+            });
+        } else {
+            // New item from cloud
+            await db.functions.add({
+                cloud_id: cf.id,
+                name: cf.name,
+                description: cf.description || '',
+                usage: cf.usage || '',
+                dbms: cf.dbms || [],
+                tags: cf.tags || [],
+                is_deleted: cf.is_deleted,
+                createdAt: new Date(cf.created_at),
+                updatedAt: new Date(cf.updated_at)
+            });
+        }
     }
 }
 
 async function syncOptions(userId: string) {
-    // Sync DBMS Options
-    const localDbms = await db.dbms_options.toArray();
-    const { data: cloudDbms } = await supabase.from('dbms_options').select('*');
+    // Shared Logic for Options
+    const syncTable = async (
+        localTable: any,
+        cloudTableName: 'dbms_options' | 'tag_options'
+    ) => {
+        const localItems = await localTable.toArray();
+        const { data: cloudItems } = await supabase.from(cloudTableName).select('*');
 
-    if (cloudDbms) {
-        // Push missing local to cloud
-        const missingInCloud = localDbms.filter(l => !l.cloud_id);
+        if (!cloudItems) return;
+
+        // Push New/Missing
+        const missingInCloud = localItems.filter((l: any) => !l.cloud_id);
         for (const l of missingInCloud) {
-            // Check if exists by name to prevent duplicates
-            const existing = cloudDbms.find(c => c.name === l.name);
+            // Check by name
+            const existing = cloudItems.find((c: any) => c.name === l.name);
             if (existing) {
-                await db.dbms_options.update(l.id!, { cloud_id: existing.id });
+                // Link
+                await localTable.update(l.id, { cloud_id: existing.id });
+                // If local is deleted, but cloud is not, we might want to delete cloud too?
+                // Or if local is deleted, we just push that status
+                if (l.is_deleted !== existing.is_deleted) {
+                    await supabase.from(cloudTableName).update({ is_deleted: !!l.is_deleted }).eq('id', existing.id);
+                }
             } else {
-                const { data } = await supabase.from('dbms_options').insert({ name: l.name, user_id: userId }).select().single();
-                if (data) await db.dbms_options.update(l.id!, { cloud_id: data.id });
+                const { data } = await supabase.from(cloudTableName).insert({
+                    name: l.name,
+                    user_id: userId,
+                    is_deleted: !!l.is_deleted
+                }).select().single();
+                if (data) await localTable.update(l.id, { cloud_id: data.id });
             }
         }
 
-        // Pull missing cloud to local
-        const localCloudIds = new Set(localDbms.map(l => l.cloud_id).filter(Boolean));
-        // Also check by name to prevent local duplicates if name matches but no cloud_id yet (edge case)
-        const localNames = new Set(localDbms.map(l => l.name));
+        // Push Updates for existing
+        const linkedLocal = localItems.filter((l: any) => l.cloud_id);
+        for (const l of linkedLocal) {
+            await supabase.from(cloudTableName).update({
+                is_deleted: !!l.is_deleted
+            }).eq('id', l.cloud_id);
+        }
 
-        const missingInLocal = cloudDbms.filter(c => !localCloudIds.has(c.id));
-        for (const c of missingInLocal) {
-            if (!localNames.has(c.name)) {
-                await db.dbms_options.add({ cloud_id: c.id, name: c.name });
+        // Pull Cloud -> Local
+        const localMap = new Map(localItems.map((l: any) => [l.cloud_id, l]));
+        const localNameMap = new Map(localItems.map((l: any) => [l.name, l]));
+
+        for (const c of cloudItems) {
+            const local = localMap.get(c.id) as any;
+            if (local) {
+                // Update
+                if (local.is_deleted && !c.is_deleted) continue; // Zombie protection
+
+                await localTable.update(local.id, {
+                    is_deleted: c.is_deleted
+                });
             } else {
-                // If local has name but no cloud_id, update it
-                const localMatch = localDbms.find(l => l.name === c.name);
-                if (localMatch && !localMatch.cloud_id) {
-                    await db.dbms_options.update(localMatch.id!, { cloud_id: c.id });
+                // New from cloud
+                // Check if name matches existing to prevent duplicate
+                const localByName = localNameMap.get(c.name) as any;
+                if (localByName) {
+                    await localTable.update(localByName.id, { cloud_id: c.id, is_deleted: c.is_deleted });
+                } else {
+                    await localTable.add({
+                        cloud_id: c.id,
+                        name: c.name,
+                        is_deleted: c.is_deleted
+                    });
                 }
             }
         }
-    }
+    };
 
-    // Sync Tag Options
-    const localTags = await db.tag_options.toArray();
-    const { data: cloudTags } = await supabase.from('tag_options').select('*');
-
-    if (cloudTags) {
-        // Push missing local to cloud
-        const missingInCloud = localTags.filter(l => !l.cloud_id);
-        for (const l of missingInCloud) {
-            // Check if exists by name
-            const existing = cloudTags.find(c => c.name === l.name);
-            if (existing) {
-                await db.tag_options.update(l.id!, { cloud_id: existing.id });
-            } else {
-                const { data } = await supabase.from('tag_options').insert({ name: l.name, user_id: userId }).select().single();
-                if (data) await db.tag_options.update(l.id!, { cloud_id: data.id });
-            }
-        }
-
-        // Pull missing cloud to local
-        const localCloudIds = new Set(localTags.map(l => l.cloud_id).filter(Boolean));
-        const localNames = new Set(localTags.map(l => l.name));
-
-        const missingInLocal = cloudTags.filter(c => !localCloudIds.has(c.id));
-        for (const c of missingInLocal) {
-            if (!localNames.has(c.name)) {
-                await db.tag_options.add({ cloud_id: c.id, name: c.name });
-            } else {
-                const localMatch = localTags.find(l => l.name === c.name);
-                if (localMatch && !localMatch.cloud_id) {
-                    await db.tag_options.update(localMatch.id!, { cloud_id: c.id });
-                }
-            }
-        }
-    }
+    await syncTable(db.dbms_options, 'dbms_options');
+    await syncTable(db.tag_options, 'tag_options');
 }

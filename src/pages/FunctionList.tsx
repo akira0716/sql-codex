@@ -5,28 +5,29 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Tag, Database, Edit2, Trash2 } from 'lucide-react';
 import { Modal } from '../components/Modal';
 
-export const FunctionList: React.FC = () => {
+export function FunctionList() {
+    const navigate = useNavigate();
     const [search, setSearch] = useState('');
     const [selectedFunction, setSelectedFunction] = useState<SQLFunction | null>(null);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
-    const navigate = useNavigate();
 
     const functions = useLiveQuery(async () => {
-        if (!search) return await db.functions.toArray();
+        if (!search) return await db.functions.filter(f => !f.is_deleted).reverse().sortBy('updatedAt');
 
-        const all = await db.functions.toArray();
+        const all = await db.functions.filter(f => !f.is_deleted).toArray();
         const lowerSearch = search.toLowerCase();
         return all.filter(f =>
             f.name.toLowerCase().includes(lowerSearch) ||
             f.tags.some(t => t.toLowerCase().includes(lowerSearch)) ||
             f.dbms.some(d => d.toLowerCase().includes(lowerSearch))
-        );
+        ).sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
     }, [search]);
 
     const handleDelete = async (e: React.MouseEvent, id: number) => {
         e.stopPropagation();
         if (confirm('Are you sure you want to delete this function?')) {
-            await db.functions.delete(id);
+            // Soft Delete
+            await db.functions.update(id, { is_deleted: true, updatedAt: new Date() });
             if (selectedFunction?.id === id) setSelectedFunction(null);
         }
     };
@@ -397,4 +398,4 @@ export const FunctionList: React.FC = () => {
             </Modal>
         </div>
     );
-};
+}

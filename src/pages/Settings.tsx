@@ -15,8 +15,8 @@ export const Settings: React.FC = () => {
     const { user, loading: authLoading, signInWithGoogle, signOut } = useAuth();
 
     // Fetch existing options
-    const dbmsOptions = useLiveQuery(() => db.dbms_options.toArray());
-    const tagOptions = useLiveQuery(() => db.tag_options.toArray());
+    const dbmsOptions = useLiveQuery(() => db.dbms_options.filter(o => !o.is_deleted).toArray());
+    const tagOptions = useLiveQuery(() => db.tag_options.filter(o => !o.is_deleted).toArray());
 
     // Initialize inputs when data is loaded
     useEffect(() => {
@@ -43,11 +43,33 @@ export const Settings: React.FC = () => {
         const newTagsList = tagsInput.split(',').map(s => s.trim()).filter(Boolean);
 
         await db.transaction('rw', db.dbms_options, db.tag_options, async () => {
-            await db.dbms_options.clear();
-            await db.dbms_options.bulkAdd(newDbmsList.map(name => ({ name })));
+            // DBMS Options: Soft Delete removed ones, Add new ones
+            const currentDbms = await db.dbms_options.toArray();
+            for (const dbms of currentDbms) {
+                if (!newDbmsList.includes(dbms.name)) {
+                    if (!dbms.is_deleted) await db.dbms_options.update(dbms.id!, { is_deleted: true });
+                } else {
+                    // If it was deleted but added back, resurrect it
+                    if (dbms.is_deleted) await db.dbms_options.update(dbms.id!, { is_deleted: false });
+                }
+            }
+            // Add strictly new ones
+            const existingDbmsNames = new Set(currentDbms.map(d => d.name));
+            const trulyNewDbms = newDbmsList.filter(name => !existingDbmsNames.has(name));
+            await db.dbms_options.bulkAdd(trulyNewDbms.map(name => ({ name, is_deleted: false })));
 
-            await db.tag_options.clear();
-            await db.tag_options.bulkAdd(newTagsList.map(name => ({ name })));
+            // Tag Options: Soft Delete removed ones, Add new ones
+            const currentTags = await db.tag_options.toArray();
+            for (const tag of currentTags) {
+                if (!newTagsList.includes(tag.name)) {
+                    if (!tag.is_deleted) await db.tag_options.update(tag.id!, { is_deleted: true });
+                } else {
+                    if (tag.is_deleted) await db.tag_options.update(tag.id!, { is_deleted: false });
+                }
+            }
+            const existingTagNames = new Set(currentTags.map(t => t.name));
+            const trulyNewTags = newTagsList.filter(name => !existingTagNames.has(name));
+            await db.tag_options.bulkAdd(trulyNewTags.map(name => ({ name, is_deleted: false })));
         });
 
         setSaved(true);

@@ -71,7 +71,15 @@ export const FunctionEditor: React.FC = () => {
 
     const handleDelete = async () => {
         if (isEdit && id && confirm('Are you sure you want to delete this function?')) {
-            await db.functions.delete(Number(id));
+            // Soft delete
+            await db.functions.update(Number(id), {
+                is_deleted: true,
+                updatedAt: new Date() // Update timestamp to trigger sync
+            });
+
+            // Auto sync if logged in
+            if (user) syncData();
+
             navigate('/');
         }
     };

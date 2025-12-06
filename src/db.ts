@@ -8,6 +8,7 @@ export interface SQLFunction {
     usage: string;
     dbms: string[];
     tags: string[];
+    is_deleted?: boolean;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -16,12 +17,14 @@ export interface DBMSOption {
     id?: number;
     cloud_id?: string;
     name: string;
+    is_deleted?: boolean;
 }
 
 export interface TagOption {
     id?: number;
     cloud_id?: string;
     name: string;
+    is_deleted?: boolean;
 }
 
 export class SQLCodexDB extends Dexie {
@@ -42,6 +45,11 @@ export class SQLCodexDB extends Dexie {
             functions: '++id, cloud_id, name, *dbms, *tags, createdAt, updatedAt',
             dbms_options: '++id, cloud_id, &name',
             tag_options: '++id, cloud_id, &name'
+        });
+        this.version(4).stores({
+            functions: '++id, cloud_id, name, *dbms, *tags, is_deleted, createdAt, updatedAt',
+            dbms_options: '++id, cloud_id, &name, is_deleted',
+            tag_options: '++id, cloud_id, &name, is_deleted'
         });
     }
 }
