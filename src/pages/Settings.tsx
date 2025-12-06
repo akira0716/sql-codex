@@ -1,16 +1,34 @@
 import React, { useState, useEffect } from 'react';
-import { Save } from 'lucide-react';
+import { Save, LogIn, LogOut, RefreshCw } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
+import { supabase } from '../supabase';
+import { syncData } from '../sync';
+import type { User } from '@supabase/supabase-js';
 
 export const Settings: React.FC = () => {
     const [dbmsInput, setDbmsInput] = useState('');
     const [tagsInput, setTagsInput] = useState('');
     const [saved, setSaved] = useState(false);
+    const [user, setUser] = useState<User | null>(null);
+    const [isSyncing, setIsSyncing] = useState(false);
 
     // Fetch existing options
     const dbmsOptions = useLiveQuery(() => db.dbms_options.toArray());
     const tagOptions = useLiveQuery(() => db.tag_options.toArray());
+
+    // Check auth status
+    useEffect(() => {
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            setUser(user);
+        });
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user ?? null);
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
 
     // Initialize inputs when data is loaded
     useEffect(() => {
@@ -25,12 +43,32 @@ export const Settings: React.FC = () => {
         }
     }, [tagOptions]);
 
+    const handleLogin = async () => {
+        await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: window.location.origin
+            }
+        });
+    };
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+    };
+
+    const handleSync = async () => {
+        if (!user) return;
+        setIsSyncing(true);
+        await syncData();
+        setIsSyncing(false);
+        alert('Sync completed!');
+    };
+
     const handleSave = async () => {
         const newDbmsList = dbmsInput.split(',').map(s => s.trim()).filter(Boolean);
         const newTagsList = tagsInput.split(',').map(s => s.trim()).filter(Boolean);
 
         await db.transaction('rw', db.dbms_options, db.tag_options, async () => {
-            // Clear and re-add (simple sync strategy)
             await db.dbms_options.clear();
             await db.dbms_options.bulkAdd(newDbmsList.map(name => ({ name })));
 
@@ -40,6 +78,11 @@ export const Settings: React.FC = () => {
 
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
+
+        // Auto sync if logged in
+        if (user) {
+            handleSync();
+        }
     };
 
     return (
@@ -65,6 +108,73 @@ export const Settings: React.FC = () => {
             </header>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                {/* Account Section */}
+                <section style={{ backgroundColor: 'var(--bg-secondary)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>Account & Sync</h2>
+                    {user ? (
+                        <div>
+                            <p style={{ marginBottom: '1rem', color: 'var(--text-secondary)' }}>
+                                Logged in as: <span style={{ color: 'var(--text-primary)' }}>{user.email}</span>
+                            </p>
+                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                <button
+                                    onClick={handleSync}
+                                    disabled={isSyncing}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        padding: '0.5rem 1rem',
+                                        backgroundColor: 'var(--bg-tertiary)',
+                                        borderRadius: '6px',
+                                        color: isSyncing ? 'var(--text-secondary)' : 'var(--text-primary)',
+                                        cursor: isSyncing ? 'wait' : 'pointer'
+                                    }}
+                                >
+                                    <RefreshCw size={18} className={isSyncing ? 'spin' : ''} />
+                                    {isSyncing ? 'Syncing...' : 'Sync Now'}
+                                </button>
+                                <button
+                                    onClick={handleLogout}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        padding: '0.5rem 1rem',
+                                        border: '1px solid var(--border-color)',
+                                        borderRadius: '6px',
+                                        color: 'var(--text-secondary)'
+                                    }}
+                                >
+                                    <LogOut size={18} />
+                                    Logout
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div>
+                            <p style={{ marginBottom: '1rem', color: 'var(--text-secondary)' }}>
+                                Sign in to sync your data to the cloud.
+                            </p>
+                            <button
+                                onClick={handleLogin}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    padding: '0.5rem 1rem',
+                                    backgroundColor: 'white',
+                                    color: 'black',
+                                    borderRadius: '6px',
+                                    fontWeight: 500
+                                }}
+                            >
+                                <LogIn size={18} />
+                                Sign in with Google
+                            </button>
+                        </div>
+                    )}
+                </section>
                 <section>
                     <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>DBMS Options</h2>
                     <p style={{ marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
