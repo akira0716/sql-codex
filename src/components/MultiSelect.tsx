@@ -1,0 +1,156 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Check, ChevronDown } from 'lucide-react';
+
+interface MultiSelectProps {
+    options: string[];
+    value: string[];
+    onChange: (value: string[]) => void;
+    placeholder?: string;
+}
+
+export const MultiSelect: React.FC<MultiSelectProps> = ({ options, value, onChange, placeholder = 'Select...' }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [filter, setFilter] = useState('');
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const toggleOption = (option: string) => {
+        if (value.includes(option)) {
+            onChange(value.filter(v => v !== option));
+        } else {
+            onChange([...value, option]);
+        }
+    };
+
+    const removeOption = (e: React.MouseEvent, option: string) => {
+        e.stopPropagation();
+        onChange(value.filter(v => v !== option));
+    };
+
+    const filteredOptions = options.filter(opt =>
+        opt.toLowerCase().includes(filter.toLowerCase())
+    );
+
+    return (
+        <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
+            <div
+                onClick={() => setIsOpen(!isOpen)}
+                style={{
+                    minHeight: '42px',
+                    padding: '0.5rem',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    border: `1px solid ${isOpen ? 'var(--accent-primary)' : 'var(--border-color)'}`,
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '0.5rem',
+                    alignItems: 'center'
+                }}
+            >
+                {value.length === 0 && (
+                    <span style={{ color: 'var(--text-secondary)', marginLeft: '0.25rem' }}>{placeholder}</span>
+                )}
+
+                {value.map(v => (
+                    <span key={v} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        color: 'var(--accent-primary)',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        fontSize: '0.9rem'
+                    }}>
+                        {v}
+                        <X
+                            size={14}
+                            style={{ cursor: 'pointer' }}
+                            onClick={(e) => removeOption(e, v)}
+                        />
+                    </span>
+                ))}
+
+                <div style={{ marginLeft: 'auto', color: 'var(--text-secondary)' }}>
+                    <ChevronDown size={16} />
+                </div>
+            </div>
+
+            {isOpen && (
+                <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    marginTop: '4px',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '4px',
+                    zIndex: 50,
+                    maxHeight: '200px',
+                    overflowY: 'auto',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                }}>
+                    <input
+                        type="text"
+                        value={filter}
+                        onChange={(e) => setFilter(e.target.value)}
+                        placeholder="Filter options..."
+                        style={{
+                            width: '100%',
+                            padding: '0.5rem',
+                            border: 'none',
+                            borderBottom: '1px solid var(--border-color)',
+                            backgroundColor: 'transparent',
+                            outline: 'none',
+                            color: 'var(--text-primary)'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    />
+
+                    {filteredOptions.length === 0 ? (
+                        <div style={{ padding: '0.5rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
+                            No options found
+                        </div>
+                    ) : (
+                        filteredOptions.map(option => (
+                            <div
+                                key={option}
+                                onClick={() => toggleOption(option)}
+                                style={{
+                                    padding: '0.5rem',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    backgroundColor: value.includes(option) ? 'rgba(59, 130, 246, 0.05)' : 'transparent',
+                                    color: value.includes(option) ? 'var(--accent-primary)' : 'var(--text-primary)'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = value.includes(option) ? 'rgba(59, 130, 246, 0.05)' : 'transparent';
+                                }}
+                            >
+                                {option}
+                                {value.includes(option) && <Check size={16} />}
+                            </div>
+                        ))
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};

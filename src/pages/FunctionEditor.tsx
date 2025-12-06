@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { Save, ArrowLeft, Trash2 } from 'lucide-react';
+import { MultiSelect } from '../components/MultiSelect';
 
 export const FunctionEditor: React.FC = () => {
     const { id } = useParams();
@@ -11,8 +13,16 @@ export const FunctionEditor: React.FC = () => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [usage, setUsage] = useState('');
-    const [dbmsInput, setDbmsInput] = useState('');
-    const [tagsInput, setTagsInput] = useState('');
+
+    const [selectedDbms, setSelectedDbms] = useState<string[]>([]);
+    const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+    // Fetch options from DB
+    const dbmsOptionsData = useLiveQuery(() => db.dbms_options.toArray());
+    const tagOptionsData = useLiveQuery(() => db.tag_options.toArray());
+
+    const dbmsOptions = dbmsOptionsData?.map(o => o.name) || [];
+    const tagsOptions = tagOptionsData?.map(o => o.name) || [];
 
     useEffect(() => {
         if (isEdit && id) {
@@ -21,23 +31,20 @@ export const FunctionEditor: React.FC = () => {
                     setName(func.name);
                     setDescription(func.description);
                     setUsage(func.usage);
-                    setDbmsInput(func.dbms.join(', '));
-                    setTagsInput(func.tags.join(', '));
+                    setSelectedDbms(func.dbms);
+                    setSelectedTags(func.tags);
                 }
             });
         }
     }, [isEdit, id]);
 
     const handleSave = async () => {
-        const dbms = dbmsInput.split(',').map(s => s.trim()).filter(Boolean);
-        const tags = tagsInput.split(',').map(s => s.trim()).filter(Boolean);
-
         const data = {
             name,
             description,
             usage,
-            dbms,
-            tags,
+            dbms: selectedDbms,
+            tags: selectedTags,
             updatedAt: new Date(),
         };
 
@@ -108,24 +115,32 @@ export const FunctionEditor: React.FC = () => {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                     <div>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>DBMS (comma separated)</label>
-                        <input
-                            type="text"
-                            value={dbmsInput}
-                            onChange={e => setDbmsInput(e.target.value)}
-                            style={{ width: '100%' }}
-                            placeholder="e.g., PostgreSQL, MySQL"
+                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>DBMS</label>
+                        <MultiSelect
+                            options={dbmsOptions}
+                            value={selectedDbms}
+                            onChange={setSelectedDbms}
+                            placeholder="Select DBMS..."
                         />
+                        {dbmsOptions.length === 0 && (
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                                Configure options in <span style={{ textDecoration: 'underline', cursor: 'pointer' }} onClick={() => navigate('/settings')}>Settings</span>
+                            </div>
+                        )}
                     </div>
                     <div>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Tags (comma separated)</label>
-                        <input
-                            type="text"
-                            value={tagsInput}
-                            onChange={e => setTagsInput(e.target.value)}
-                            style={{ width: '100%' }}
-                            placeholder="e.g., date, string, aggregation"
+                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Tags</label>
+                        <MultiSelect
+                            options={tagsOptions}
+                            value={selectedTags}
+                            onChange={setSelectedTags}
+                            placeholder="Select Tags..."
                         />
+                        {tagsOptions.length === 0 && (
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                                Configure options in <span style={{ textDecoration: 'underline', cursor: 'pointer' }} onClick={() => navigate('/settings')}>Settings</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
