@@ -4,24 +4,58 @@ import { db, type SQLFunction } from '../db';
 import { useNavigate } from 'react-router-dom';
 import { Search, Tag, Database, Edit2, Trash2 } from 'lucide-react';
 import { Modal } from '../components/Modal';
+import { SearchFilter } from '../components/SearchFilter';
 
 export function FunctionList() {
     const navigate = useNavigate();
-    const [search, setSearch] = useState('');
+    const [searchName, setSearchName] = useState('');
+    const [selectedDbms, setSelectedDbms] = useState<string[]>([]);
+    const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
     const [selectedFunction, setSelectedFunction] = useState<SQLFunction | null>(null);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-    const functions = useLiveQuery(async () => {
-        if (!search) return await db.functions.filter(f => !f.is_deleted).reverse().sortBy('updatedAt');
+    // Fetch options
+    const dbmsOptions = useLiveQuery(async () => {
+        const options = await db.dbms_options.filter(o => !o.is_deleted).toArray();
+        return options.map(o => o.name).sort();
+    }, []) || [];
 
-        const all = await db.functions.filter(f => !f.is_deleted).toArray();
-        const lowerSearch = search.toLowerCase();
-        return all.filter(f =>
-            f.name.toLowerCase().includes(lowerSearch) ||
-            f.tags.some(t => t.toLowerCase().includes(lowerSearch)) ||
-            f.dbms.some(d => d.toLowerCase().includes(lowerSearch))
-        ).sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
-    }, [search]);
+    const tagOptions = useLiveQuery(async () => {
+        const options = await db.tag_options.filter(o => !o.is_deleted).toArray();
+        return options.map(o => o.name).sort();
+    }, []) || [];
+
+    const functions = useLiveQuery(async () => {
+        let collection = db.functions.filter(f => !f.is_deleted);
+
+        // Optimization: If no filters, return all sorted
+        if (!searchName && selectedDbms.length === 0 && selectedTags.length === 0) {
+            return await collection.reverse().sortBy('updatedAt');
+        }
+
+        const all = await collection.toArray();
+        const lowerSearch = searchName.toLowerCase();
+
+        return all.filter(f => {
+            // Name Filter (Partial Match)
+            if (searchName && !f.name.toLowerCase().includes(lowerSearch)) return false;
+
+            // DBMS Filter (OR logic: match ANY selected)
+            if (selectedDbms.length > 0) {
+                const hasMatch = f.dbms.some(d => selectedDbms.includes(d));
+                if (!hasMatch) return false;
+            }
+
+            // Tags Filter (OR logic: match ANY selected)
+            if (selectedTags.length > 0) {
+                const hasMatch = f.tags.some(t => selectedTags.includes(t));
+                if (!hasMatch) return false;
+            }
+
+            return true;
+        }).sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+    }, [searchName, selectedDbms, selectedTags]);
 
     const handleDelete = async (e: React.MouseEvent, id: number) => {
         e.stopPropagation();
@@ -39,50 +73,72 @@ export function FunctionList() {
 
     if (!functions) return null;
 
+    const clearFilters = () => {
+        setSearchName('');
+        setSelectedDbms([]);
+        setSelectedTags([]);
+    };
+
+    const activeFiltersCount = selectedDbms.length + selectedTags.length + (searchName ? 1 : 0);
+
     return (
         <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-            <header style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+            <header style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
                 <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>Library</h1>
 
-                {/* Desktop Search - inline */}
-                <div className="search-desktop" style={{ position: 'relative', width: '300px' }}>
-                    <Search size={18} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                    <input
-                        type="text"
-                        placeholder="Search..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        style={{ width: '100%', paddingLeft: '36px' }}
-                    />
-                </div>
-
-                {/* Mobile Search - icon button */}
+                {/* Mobile Search Button */}
                 <button
                     className="search-mobile"
                     onClick={() => setIsSearchOpen(true)}
                     style={{
                         padding: '0.75rem',
                         borderRadius: '8px',
-                        backgroundColor: 'var(--bg-tertiary)',
-                        color: 'var(--text-secondary)',
+                        backgroundColor: activeFiltersCount > 0 ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                        color: activeFiltersCount > 0 ? 'white' : 'var(--text-secondary)',
                         display: 'none',
                         alignItems: 'center',
                         gap: '0.5rem',
-                        transition: 'background-color 0.2s, color 0.2s'
+                        transition: 'background-color 0.2s, color 0.2s',
+                        position: 'relative'
                     }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = 'var(--accent-primary)';
-                        e.currentTarget.style.color = 'white';
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
-                        e.currentTarget.style.color = 'var(--text-secondary)';
-                    }}
-                    title="Search"
                 >
                     <Search size={20} />
+                    {activeFiltersCount > 0 && (
+                        <span style={{
+                            position: 'absolute',
+                            top: '-5px',
+                            right: '-5px',
+                            backgroundColor: '#ef4444',
+                            color: 'white',
+                            fontSize: '0.7rem',
+                            borderRadius: '50%',
+                            width: '18px',
+                            height: '18px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: '2px solid var(--bg-primary)'
+                        }}>
+                            {activeFiltersCount}
+                        </span>
+                    )}
                 </button>
             </header>
+
+            {/* Desktop Search Area - Moved here */}
+            <div className="search-desktop" style={{ marginBottom: '2rem', width: '100%' }}>
+                <SearchFilter
+                    searchName={searchName}
+                    onSearchNameChange={setSearchName}
+                    selectedDbms={selectedDbms}
+                    onDbmsChange={setSelectedDbms}
+                    dbmsOptions={dbmsOptions}
+                    selectedTags={selectedTags}
+                    onTagsChange={setSelectedTags}
+                    tagOptions={tagOptions}
+                    layout="row"
+                />
+            </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
                 {functions.map(func => (
@@ -228,7 +284,22 @@ export function FunctionList() {
             {functions.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-secondary)' }}>
                     <Database size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
-                    <p>No functions found. Create one to get started.</p>
+                    <p>No functions found matching your filters.</p>
+                    {(searchName || selectedDbms.length > 0 || selectedTags.length > 0) && (
+                        <button
+                            onClick={clearFilters}
+                            style={{
+                                marginTop: '1rem',
+                                padding: '0.5rem 1rem',
+                                borderRadius: '4px',
+                                backgroundColor: 'var(--bg-tertiary)',
+                                color: 'var(--text-primary)',
+                                fontSize: '0.9rem'
+                            }}
+                        >
+                            Clear Filters
+                        </button>
+                    )}
                 </div>
             )}
 
@@ -237,6 +308,7 @@ export function FunctionList() {
                 onClose={() => setSelectedFunction(null)}
                 title={selectedFunction?.name || ''}
             >
+                {/* ... existing detail modal content ... */}
                 {selectedFunction && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                         <div>
@@ -300,100 +372,55 @@ export function FunctionList() {
                 )}
             </Modal>
 
-            {/* Search Modal */}
+            {/* Mobile Search Modal */}
             <Modal
                 isOpen={isSearchOpen}
-                onClose={() => {
-                    setIsSearchOpen(false);
-                    setSearch('');
-                }}
-                title="Search"
+                onClose={() => setIsSearchOpen(false)}
+                title="Search Filters"
             >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>
-                        関数名、DBMS、タグで検索できます
+                <div>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: '0 0 1rem 0' }}>
+                        検索条件を指定してください
                     </p>
-                    <div style={{ position: 'relative' }}>
-                        <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                        <input
-                            type="text"
-                            placeholder="検索..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            autoFocus
+                    <SearchFilter
+                        searchName={searchName}
+                        onSearchNameChange={setSearchName}
+                        selectedDbms={selectedDbms}
+                        onDbmsChange={setSelectedDbms}
+                        dbmsOptions={dbmsOptions}
+                        selectedTags={selectedTags}
+                        onTagsChange={setSelectedTags}
+                        tagOptions={tagOptions}
+                        isMobile={true} // Disable autoFocus
+                    />
+                    <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                        <button
+                            onClick={clearFilters}
                             style={{
-                                width: '100%',
-                                padding: '0.75rem 0.75rem 0.75rem 40px',
-                                fontSize: '1rem'
+                                padding: '0.75rem 1.5rem',
+                                borderRadius: '6px',
+                                backgroundColor: 'transparent',
+                                color: 'var(--text-secondary)',
+                                border: '1px solid var(--border-color)',
+                                fontSize: '0.9rem'
                             }}
-                        />
+                        >
+                            Clear
+                        </button>
+                        <button
+                            onClick={() => setIsSearchOpen(false)}
+                            style={{
+                                padding: '0.75rem 1.5rem',
+                                borderRadius: '6px',
+                                backgroundColor: 'var(--accent-primary)',
+                                color: 'white',
+                                fontSize: '0.9rem',
+                                fontWeight: 'bold'
+                            }}
+                        >
+                            Show Results ({functions?.length || 0})
+                        </button>
                     </div>
-
-                    {search && (
-                        <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                            {functions?.filter(f =>
-                                f.name.toLowerCase().includes(search.toLowerCase()) ||
-                                f.tags.some(t => t.toLowerCase().includes(search.toLowerCase())) ||
-                                f.dbms.some(d => d.toLowerCase().includes(search.toLowerCase()))
-                            ).map(func => (
-                                <div
-                                    key={func.id}
-                                    onClick={() => {
-                                        setSelectedFunction(func);
-                                        setIsSearchOpen(false);
-                                        setSearch('');
-                                    }}
-                                    style={{
-                                        padding: '1rem',
-                                        borderRadius: '6px',
-                                        cursor: 'pointer',
-                                        marginBottom: '0.5rem',
-                                        backgroundColor: 'var(--bg-tertiary)',
-                                        border: '1px solid var(--border-color)',
-                                        transition: 'border-color 0.2s'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.borderColor = 'var(--accent-primary)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.borderColor = 'var(--border-color)';
-                                    }}
-                                >
-                                    <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>{func.name}</div>
-                                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                        {func.dbms.slice(0, 3).map(d => (
-                                            <span key={d} style={{
-                                                fontSize: '0.75rem',
-                                                padding: '2px 6px',
-                                                borderRadius: '4px',
-                                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                                                color: 'var(--accent-primary)'
-                                            }}>
-                                                {d}
-                                            </span>
-                                        ))}
-                                        {func.tags.slice(0, 2).map(tag => (
-                                            <span key={tag} style={{
-                                                fontSize: '0.75rem',
-                                                color: 'var(--text-secondary)'
-                                            }}>
-                                                #{tag}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
-                            {functions?.filter(f =>
-                                f.name.toLowerCase().includes(search.toLowerCase()) ||
-                                f.tags.some(t => t.toLowerCase().includes(search.toLowerCase())) ||
-                                f.dbms.some(d => d.toLowerCase().includes(search.toLowerCase()))
-                            ).length === 0 && (
-                                    <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem' }}>
-                                        No results found
-                                    </div>
-                                )}
-                        </div>
-                    )}
                 </div>
             </Modal>
         </div>
