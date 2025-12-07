@@ -1,17 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Save, LogIn, LogOut, RefreshCw, Globe } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { syncData } from '../sync';
 import { useAuth } from '../AuthContext';
 import { useLanguage } from '../i18n';
+import { useUnsavedChanges } from '../UnsavedChangesContext';
 
 export const Settings: React.FC = () => {
     const { t, language, setLanguage } = useLanguage();
+    const { setHasUnsavedChanges } = useUnsavedChanges();
+
     const [dbmsInput, setDbmsInput] = useState('');
     const [tagsInput, setTagsInput] = useState('');
+    const [pendingLanguage, setPendingLanguage] = useState<'ja' | 'en'>(language);
     const [saved, setSaved] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [initialDbms, setInitialDbms] = useState('');
+    const [initialTags, setInitialTags] = useState('');
 
     // Get auth state from context
     const { user, loading: authLoading, signInWithGoogle, signOut } = useAuth();
@@ -23,15 +29,48 @@ export const Settings: React.FC = () => {
     // Initialize inputs when data is loaded
     useEffect(() => {
         if (dbmsOptions) {
-            setDbmsInput(dbmsOptions.map(o => o.name).join(', '));
+            const dbmsStr = dbmsOptions.map(o => o.name).join(', ');
+            setDbmsInput(dbmsStr);
+            setInitialDbms(dbmsStr);
         }
     }, [dbmsOptions]);
 
     useEffect(() => {
         if (tagOptions) {
-            setTagsInput(tagOptions.map(o => o.name).join(', '));
+            const tagsStr = tagOptions.map(o => o.name).join(', ');
+            setTagsInput(tagsStr);
+            setInitialTags(tagsStr);
         }
     }, [tagOptions]);
+
+    // Check if there are unsaved changes
+    const hasChanges = useCallback(() => {
+        return dbmsInput !== initialDbms ||
+            tagsInput !== initialTags ||
+            pendingLanguage !== language;
+    }, [dbmsInput, initialDbms, tagsInput, initialTags, pendingLanguage, language]);
+
+    // Update the context whenever hasChanges changes
+    useEffect(() => {
+        setHasUnsavedChanges(hasChanges());
+    }, [hasChanges, setHasUnsavedChanges]);
+
+    // Clean up on unmount
+    useEffect(() => {
+        return () => setHasUnsavedChanges(false);
+    }, [setHasUnsavedChanges]);
+
+    // Warn on page refresh/close when there are unsaved changes
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (hasChanges()) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [hasChanges]);
 
     const handleSync = async () => {
         if (!user) return;
@@ -51,11 +90,9 @@ export const Settings: React.FC = () => {
                 if (!newDbmsList.includes(dbms.name)) {
                     if (!dbms.is_deleted) await db.dbms_options.update(dbms.id!, { is_deleted: true });
                 } else {
-                    // If it was deleted but added back, resurrect it
                     if (dbms.is_deleted) await db.dbms_options.update(dbms.id!, { is_deleted: false });
                 }
             }
-            // Add strictly new ones
             const existingDbmsNames = new Set(currentDbms.map(d => d.name));
             const trulyNewDbms = newDbmsList.filter(name => !existingDbmsNames.has(name));
             await db.dbms_options.bulkAdd(trulyNewDbms.map(name => ({ name, is_deleted: false })));
@@ -74,6 +111,15 @@ export const Settings: React.FC = () => {
             await db.tag_options.bulkAdd(trulyNewTags.map(name => ({ name, is_deleted: false })));
         });
 
+        // Apply language change
+        if (pendingLanguage !== language) {
+            setLanguage(pendingLanguage);
+        }
+
+        // Update initial values to current
+        setInitialDbms(dbmsInput);
+        setInitialTags(tagsInput);
+
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
 
@@ -90,14 +136,15 @@ export const Settings: React.FC = () => {
                 <button
                     onClick={handleSave}
                     style={{
-                        backgroundColor: 'var(--accent-primary)',
-                        color: 'white',
+                        backgroundColor: hasChanges() ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                        color: hasChanges() ? 'white' : 'var(--text-secondary)',
                         padding: '0.5rem 1rem',
                         borderRadius: '6px',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.5rem',
-                        fontWeight: 500
+                        fontWeight: 500,
+                        transition: 'all 0.2s'
                     }}
                 >
                     <Save size={20} />
@@ -105,45 +152,21 @@ export const Settings: React.FC = () => {
                 </button>
             </header>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                {/* Language Section */}
-                <section style={{ backgroundColor: 'var(--bg-secondary)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                    <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <Globe size={20} />
-                        {t('settings.language')}
-                    </h2>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button
-                            onClick={() => setLanguage('ja')}
-                            style={{
-                                padding: '0.5rem 1rem',
-                                borderRadius: '6px',
-                                backgroundColor: language === 'ja' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                                color: language === 'ja' ? 'white' : 'var(--text-primary)',
-                                fontWeight: language === 'ja' ? 'bold' : 'normal',
-                                border: 'none',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            日本語
-                        </button>
-                        <button
-                            onClick={() => setLanguage('en')}
-                            style={{
-                                padding: '0.5rem 1rem',
-                                borderRadius: '6px',
-                                backgroundColor: language === 'en' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                                color: language === 'en' ? 'white' : 'var(--text-primary)',
-                                fontWeight: language === 'en' ? 'bold' : 'normal',
-                                border: 'none',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            English
-                        </button>
-                    </div>
-                </section>
+            {hasChanges() && (
+                <div style={{
+                    padding: '0.75rem 1rem',
+                    marginBottom: '1.5rem',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                    borderRadius: '6px',
+                    color: '#f59e0b',
+                    fontSize: '0.9rem'
+                }}>
+                    ⚠️ {t('settings.unsavedChanges')}
+                </div>
+            )}
 
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                 {/* Account Section */}
                 <section style={{ backgroundColor: 'var(--bg-secondary)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                     <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>{t('settings.accountSync')}</h2>
@@ -240,6 +263,49 @@ export const Settings: React.FC = () => {
                         placeholder={t('settings.tagPlaceholder')}
                         style={{ width: '100%', minHeight: '100px', resize: 'vertical' }}
                     />
+                </section>
+
+                {/* Language Section - at the bottom */}
+                <section style={{ backgroundColor: 'var(--bg-secondary)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Globe size={20} />
+                        {t('settings.language')}
+                    </h2>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                            onClick={() => setPendingLanguage('ja')}
+                            style={{
+                                padding: '0.5rem 1rem',
+                                borderRadius: '6px',
+                                backgroundColor: pendingLanguage === 'ja' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                color: pendingLanguage === 'ja' ? 'white' : 'var(--text-primary)',
+                                fontWeight: pendingLanguage === 'ja' ? 'bold' : 'normal',
+                                border: 'none',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            日本語
+                        </button>
+                        <button
+                            onClick={() => setPendingLanguage('en')}
+                            style={{
+                                padding: '0.5rem 1rem',
+                                borderRadius: '6px',
+                                backgroundColor: pendingLanguage === 'en' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                color: pendingLanguage === 'en' ? 'white' : 'var(--text-primary)',
+                                fontWeight: pendingLanguage === 'en' ? 'bold' : 'normal',
+                                border: 'none',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            English
+                        </button>
+                    </div>
+                    {pendingLanguage !== language && (
+                        <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                            {t('settings.languageWillChange')}
+                        </p>
+                    )}
                 </section>
             </div>
         </div>

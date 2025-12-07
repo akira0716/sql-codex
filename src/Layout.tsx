@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Database, Plus, Search, Settings, User as UserIcon, LogOut, RefreshCw } from 'lucide-react';
 import { useAuth } from './AuthContext';
+import { useUnsavedChanges } from './UnsavedChangesContext';
 
 export const Layout: React.FC = () => {
     const location = useLocation();
     const { user, signOut, signInWithGoogle } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const { checkNavigation } = useUnsavedChanges();
+    const navigate = useNavigate();
 
     const isActive = (path: string) => location.pathname === path;
 
@@ -19,13 +22,20 @@ export const Layout: React.FC = () => {
         await signInWithGoogle();
     };
 
+    const handleNavClick = (e: React.MouseEvent, to: string) => {
+        e.preventDefault();
+        if (checkNavigation()) {
+            navigate(to);
+        }
+    };
+
     return (
         <div style={{
             display: 'flex',
-            height: '100svh', // Using svh is safer for mobile (ignores dynamic UI expansion)
+            height: '100svh',
             width: '100vw',
             overflow: 'hidden',
-            paddingBottom: 'env(safe-area-inset-bottom)' // Handle safe area for iPhone X+ / Android Gestures
+            paddingBottom: 'env(safe-area-inset-bottom)'
         }}>
             {/* Sidebar */}
             <nav className={isEditorPage ? 'sidebar sidebar-hide-mobile' : 'sidebar'} style={{
@@ -43,23 +53,23 @@ export const Layout: React.FC = () => {
                     <Database size={28} />
                 </div>
 
-                <Link to="/" style={{
+                <a href="/" onClick={(e) => handleNavClick(e, '/')} style={{
                     color: isActive('/') ? 'var(--accent-primary)' : 'var(--text-secondary)',
                     padding: '0.5rem',
                     borderRadius: '8px',
                     backgroundColor: isActive('/') ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
                 }}>
                     <Search size={24} />
-                </Link>
+                </a>
 
-                <Link to="/new" style={{
+                <a href="/new" onClick={(e) => handleNavClick(e, '/new')} style={{
                     color: isActive('/new') ? 'var(--accent-primary)' : 'var(--text-secondary)',
                     padding: '0.5rem',
                     borderRadius: '8px',
                     backgroundColor: isActive('/new') ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
                 }}>
                     <Plus size={24} />
-                </Link>
+                </a>
 
                 <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', position: 'relative' }}>
 
@@ -102,7 +112,7 @@ export const Layout: React.FC = () => {
                                     <div style={{
                                         position: 'absolute',
                                         bottom: '0',
-                                        left: '48px', /* To the right of the sidebar */
+                                        left: '48px',
                                         backgroundColor: 'var(--bg-secondary)',
                                         border: '1px solid var(--border-color)',
                                         borderRadius: '8px',
@@ -112,7 +122,7 @@ export const Layout: React.FC = () => {
                                         zIndex: 100,
                                         cursor: 'default'
                                     }}
-                                        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
+                                        onClick={(e) => e.stopPropagation()}
                                     >
                                         <div style={{ padding: '0.5rem', borderBottom: '1px solid var(--border-color)', marginBottom: '0.5rem' }}>
                                             <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Signed in as</div>
@@ -176,9 +186,9 @@ export const Layout: React.FC = () => {
                         </>
                     )}
 
-                    <Link to="/settings" style={{ color: 'var(--text-secondary)', padding: '0.5rem' }}>
+                    <a href="/settings" onClick={(e) => handleNavClick(e, '/settings')} style={{ color: 'var(--text-secondary)', padding: '0.5rem' }}>
                         <Settings size={24} />
-                    </Link>
+                    </a>
                 </div>
             </nav>
 

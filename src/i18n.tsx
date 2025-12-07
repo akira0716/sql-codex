@@ -28,6 +28,11 @@ const translations: Record<Language, Record<string, string>> = {
         'settings.tagOptions': 'Tag Options',
         'settings.tagDescription': 'Enter available tags, separated by commas.',
         'settings.tagPlaceholder': 'e.g., date, string, aggregation, window-function, json',
+        'settings.unsavedChanges': 'You have unsaved changes. Click Save to apply.',
+        'settings.unsavedWarning': 'You have unsaved changes. Are you sure you want to leave?',
+        'settings.languageWillChange': 'Language will change after saving.',
+        'settings.stayOnPage': 'Stay on page',
+        'settings.leaveWithoutSaving': 'Leave without saving',
 
         // Library (FunctionList)
         'library.title': 'Library',
@@ -110,6 +115,11 @@ const translations: Record<Language, Record<string, string>> = {
         'settings.tagOptions': 'タグオプション',
         'settings.tagDescription': '利用可能なタグをカンマ区切りで入力してください。',
         'settings.tagPlaceholder': '例: 日付, 文字列, 集計, ウィンドウ関数, JSON',
+        'settings.unsavedChanges': '未保存の変更があります。保存ボタンを押して適用してください。',
+        'settings.unsavedWarning': '未保存の変更があります。このページを離れますか？',
+        'settings.languageWillChange': '保存後に言語が変更されます。',
+        'settings.stayOnPage': 'このページにとどまる',
+        'settings.leaveWithoutSaving': '保存せずに移動',
 
         // Library (FunctionList)
         'library.title': 'ライブラリ',
