@@ -8,12 +8,34 @@ import { SearchFilter } from '../components/SearchFilter';
 
 export function FunctionList() {
     const navigate = useNavigate();
-    const [searchName, setSearchName] = useState('');
-    const [selectedDbms, setSelectedDbms] = useState<string[]>([]);
-    const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+    // Load saved filters
+    const getSavedFilters = () => {
+        try {
+            const saved = localStorage.getItem('sql-codex-search-filters');
+            return saved ? JSON.parse(saved) : { searchName: '', selectedDbms: [], selectedTags: [] };
+        } catch {
+            return { searchName: '', selectedDbms: [], selectedTags: [] };
+        }
+    };
+
+    const initialFilters = getSavedFilters();
+
+    const [searchName, setSearchName] = useState(initialFilters.searchName || '');
+    const [selectedDbms, setSelectedDbms] = useState<string[]>(initialFilters.selectedDbms || []);
+    const [selectedTags, setSelectedTags] = useState<string[]>(initialFilters.selectedTags || []);
 
     const [selectedFunction, setSelectedFunction] = useState<SQLFunction | null>(null);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+    // Save filters on change
+    React.useEffect(() => {
+        localStorage.setItem('sql-codex-search-filters', JSON.stringify({
+            searchName,
+            selectedDbms,
+            selectedTags
+        }));
+    }, [searchName, selectedDbms, selectedTags]);
 
     // Fetch options
     const dbmsOptions = useLiveQuery(async () => {
