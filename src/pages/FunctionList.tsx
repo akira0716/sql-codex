@@ -5,9 +5,11 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Tag, Database, Edit2, Trash2 } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { SearchFilter } from '../components/SearchFilter';
+import { useLanguage } from '../i18n';
 
 export function FunctionList() {
     const navigate = useNavigate();
+    const { t } = useLanguage();
 
     // Load saved filters
     const getSavedFilters = () => {
@@ -81,7 +83,7 @@ export function FunctionList() {
 
     const handleDelete = async (e: React.MouseEvent, id: number) => {
         e.stopPropagation();
-        if (confirm('Are you sure you want to delete this function?')) {
+        if (confirm(t('library.confirmDelete'))) {
             // Soft Delete
             await db.functions.update(id, { is_deleted: true, updatedAt: new Date() });
             if (selectedFunction?.id === id) setSelectedFunction(null);
@@ -106,7 +108,7 @@ export function FunctionList() {
     return (
         <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
             <header style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-                <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>Library</h1>
+                <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>{t('library.title')}</h1>
 
                 {/* Mobile Search Button */}
                 <button
@@ -306,7 +308,7 @@ export function FunctionList() {
             {functions.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-secondary)' }}>
                     <Database size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
-                    <p>No functions found matching your filters.</p>
+                    <p>{t('library.noFunctions')}</p>
                     {(searchName || selectedDbms.length > 0 || selectedTags.length > 0) && (
                         <button
                             onClick={clearFilters}
@@ -319,7 +321,7 @@ export function FunctionList() {
                                 fontSize: '0.9rem'
                             }}
                         >
-                            Clear Filters
+                            {t('library.clearFilters')}
                         </button>
                     )}
                 </div>
@@ -334,12 +336,12 @@ export function FunctionList() {
                 {selectedFunction && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                         <div>
-                            <h3 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Description</h3>
+                            <h3 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('library.description')}</h3>
                             <p style={{ lineHeight: '1.6' }}>{selectedFunction.description}</p>
                         </div>
 
                         <div>
-                            <h3 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Supported DBMS</h3>
+                            <h3 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('library.supportedDbms')}</h3>
                             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                 {selectedFunction.dbms.map(d => (
                                     <span key={d} style={{
@@ -356,7 +358,7 @@ export function FunctionList() {
                         </div>
 
                         <div>
-                            <h3 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Usage</h3>
+                            <h3 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('library.usage')}</h3>
                             <div style={{
                                 backgroundColor: '#0d1117',
                                 padding: '1rem',
@@ -371,7 +373,7 @@ export function FunctionList() {
                         </div>
 
                         <div>
-                            <h3 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tags</h3>
+                            <h3 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('library.tags')}</h3>
                             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                 {selectedFunction.tags.map(tag => (
                                     <span key={tag} style={{
@@ -398,11 +400,11 @@ export function FunctionList() {
             <Modal
                 isOpen={isSearchOpen}
                 onClose={() => setIsSearchOpen(false)}
-                title="Search Filters"
+                title={t('library.searchFilters')}
             >
                 <div>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: '0 0 1rem 0' }}>
-                        検索条件を指定してください
+                        {t('library.specifyConditions')}
                     </p>
                     <SearchFilter
                         searchName={searchName}
@@ -413,7 +415,7 @@ export function FunctionList() {
                         selectedTags={selectedTags}
                         onTagsChange={setSelectedTags}
                         tagOptions={tagOptions}
-                        isMobile={true} // Disable autoFocus
+                        isMobile={true}
                     />
                     <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
                         <button
@@ -427,7 +429,7 @@ export function FunctionList() {
                                 fontSize: '0.9rem'
                             }}
                         >
-                            Clear
+                            {t('library.clear')}
                         </button>
                         <button
                             onClick={() => setIsSearchOpen(false)}
@@ -440,7 +442,7 @@ export function FunctionList() {
                                 fontWeight: 'bold'
                             }}
                         >
-                            Show Results ({functions?.length || 0})
+                            {t('library.showResults')} ({functions?.length || 0})
                         </button>
                     </div>
                 </div>

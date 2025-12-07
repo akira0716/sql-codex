@@ -2,15 +2,17 @@ import { useEffect, useState } from 'react';
 import { BookOpen, Search, Command, Cloud, ChevronRight, ChevronLeft, Settings } from 'lucide-react';
 import { Modal } from './Modal';
 import { useAuth } from '../AuthContext';
+import { useLanguage } from '../i18n';
 
 export function OnboardingModal() {
     const { user, signInWithGoogle } = useAuth();
+    const { t } = useLanguage();
     const [isOpen, setIsOpen] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
 
     const steps = [
         {
-            title: "Welcome to SQL Codex",
+            title: t('onboarding.welcome'),
             content: (
                 <div style={{ textAlign: 'center' }}>
                     <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'center' }}>
@@ -28,14 +30,13 @@ export function OnboardingModal() {
                         </div>
                     </div>
                     <p style={{ color: 'var(--text-secondary)', lineHeight: '1.6', fontSize: '1.05rem', marginBottom: '1rem' }}>
-                        SQL Codexは、開発者のためのスマートなナレッジベースです。<br />
-                        日々の開発で出会うDBMSのコマンドや関数を、ここにストックしましょう。
+                        {t('onboarding.introText')}
                     </p>
                 </div>
             )
         },
         {
-            title: "主な機能",
+            title: t('onboarding.features'),
             content: (
                 <div style={{ display: 'grid', gap: '1rem' }}>
                     <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
@@ -49,8 +50,8 @@ export function OnboardingModal() {
                             <Search size={20} />
                         </div>
                         <div>
-                            <h3 style={{ fontWeight: 'bold', color: 'var(--text-primary)', fontSize: '0.95rem' }}>スマートな検索</h3>
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>DBMSやタグで瞬時に関数をフィルタリング。</p>
+                            <h3 style={{ fontWeight: 'bold', color: 'var(--text-primary)', fontSize: '0.95rem' }}>{t('onboarding.smartSearch')}</h3>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>{t('onboarding.smartSearchDesc')}</p>
                         </div>
                     </div>
 
@@ -65,8 +66,8 @@ export function OnboardingModal() {
                             <BookOpen size={20} />
                         </div>
                         <div>
-                            <h3 style={{ fontWeight: 'bold', color: 'var(--text-primary)', fontSize: '0.95rem' }}>ナレッジの蓄積</h3>
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>使い方の背景や注意点も詳細に記録。</p>
+                            <h3 style={{ fontWeight: 'bold', color: 'var(--text-primary)', fontSize: '0.95rem' }}>{t('onboarding.knowledge')}</h3>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>{t('onboarding.knowledgeDesc')}</p>
                         </div>
                     </div>
 
@@ -81,15 +82,15 @@ export function OnboardingModal() {
                             <Command size={20} />
                         </div>
                         <div>
-                            <h3 style={{ fontWeight: 'bold', color: 'var(--text-primary)', fontSize: '0.95rem' }}>マルチDBMS対応</h3>
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>複数のDBMSでの違いもタグで管理。</p>
+                            <h3 style={{ fontWeight: 'bold', color: 'var(--text-primary)', fontSize: '0.95rem' }}>{t('onboarding.multiDbms')}</h3>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>{t('onboarding.multiDbmsDesc')}</p>
                         </div>
                     </div>
                 </div>
             )
         },
         {
-            title: "クラウド同期",
+            title: t('onboarding.cloudSync'),
             content: (
                 <div style={{ textAlign: 'center' }}>
                     <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'center' }}>
@@ -107,17 +108,15 @@ export function OnboardingModal() {
                         </div>
                     </div>
                     <h3 style={{ fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '1rem' }}>
-                        どこでもアクセス可能に
+                        {t('onboarding.accessAnywhere')}
                     </h3>
                     <p style={{ color: 'var(--text-secondary)', lineHeight: '1.6', fontSize: '0.95rem', marginBottom: '1.5rem' }}>
-                        Googleアカウントで連携すれば、あなたのナレッジライブラリをクラウドに安全に保存できます。<br />
-                        PCでもスマホでも、いつでも同じデータにアクセスしましょう。
+                        {t('onboarding.cloudSyncDesc')}
                     </p>
 
                     {!user && (
                         <button
                             onClick={() => {
-                                // Save flag before OAuth redirect to prevent modal from reappearing
                                 localStorage.setItem('sql-codex-onboarding-shown', 'true');
                                 signInWithGoogle();
                             }}
@@ -145,7 +144,7 @@ export function OnboardingModal() {
                                 <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
                                 <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
                             </svg>
-                            Googleでサインイン
+                            {t('onboarding.signInWithGoogle')}
                         </button>
                     )}
 
@@ -158,13 +157,13 @@ export function OnboardingModal() {
                             fontSize: '0.9rem',
                             marginBottom: '1rem'
                         }}>
-                            ✓ {user.email} で連携中
+                            ✓ {user.email} {t('onboarding.linkedWith')}
                         </div>
                     )}
 
                     <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
                         <Settings size={14} />
-                        後から設定画面でも連携できます
+                        {t('onboarding.laterInSettings')}
                     </p>
                 </div>
             )
@@ -226,7 +225,7 @@ export function OnboardingModal() {
                             disabled={currentStep === 0}
                         >
                             <ChevronLeft size={20} />
-                            Back
+                            {t('onboarding.back')}
                         </button>
 
                         <button
@@ -248,7 +247,7 @@ export function OnboardingModal() {
                             }}
                             className="hover-scale"
                         >
-                            {currentStep === steps.length - 1 ? 'Start' : 'Next'}
+                            {currentStep === steps.length - 1 ? t('onboarding.start') : t('onboarding.next')}
                             {currentStep < steps.length - 1 && <ChevronRight size={20} />}
                         </button>
                     </div>

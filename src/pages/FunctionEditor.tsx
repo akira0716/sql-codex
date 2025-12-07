@@ -6,11 +6,13 @@ import { Save, ArrowLeft, Trash2 } from 'lucide-react';
 import { MultiSelect } from '../components/MultiSelect';
 import { useAuth } from '../AuthContext';
 import { syncData } from '../sync';
+import { useLanguage } from '../i18n';
 
 export const FunctionEditor: React.FC = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const isEdit = !!id;
+    const { t } = useLanguage();
 
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
@@ -79,7 +81,7 @@ export const FunctionEditor: React.FC = () => {
     };
 
     const handleDelete = async () => {
-        if (isEdit && id && confirm('Are you sure you want to delete this function?')) {
+        if (isEdit && id && confirm(t('editor.confirmDelete'))) {
             // Soft delete
             await db.functions.update(Number(id), {
                 is_deleted: true,
@@ -100,13 +102,13 @@ export const FunctionEditor: React.FC = () => {
                     <button onClick={() => navigate('/')} style={{ padding: '0.5rem', borderRadius: '4px', backgroundColor: 'var(--bg-tertiary)' }}>
                         <ArrowLeft size={20} />
                     </button>
-                    <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{isEdit ? 'Edit Function' : 'New Function'}</h1>
+                    <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{isEdit ? t('editor.editFunction') : t('editor.newFunction')}</h1>
                 </div>
                 <div className="editor-buttons" style={{ display: 'flex', gap: '1rem' }}>
                     {isEdit && (
                         <button onClick={handleDelete} style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <Trash2 size={20} />
-                            <span style={{ marginLeft: '0.5rem' }}>Delete</span>
+                            <span style={{ marginLeft: '0.5rem' }}>{t('editor.delete')}</span>
                         </button>
                     )}
                     <button
@@ -123,68 +125,68 @@ export const FunctionEditor: React.FC = () => {
                         }}
                     >
                         <Save size={20} />
-                        Save
+                        {t('editor.save')}
                     </button>
                 </div>
             </header>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Function Name</label>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{t('editor.functionName')}</label>
                     <input
                         type="text"
                         value={name}
                         onChange={e => setName(e.target.value)}
                         style={{ width: '100%', fontSize: '1.1rem', padding: '0.75rem' }}
-                        placeholder="e.g., DATE_TRUNC"
+                        placeholder={t('editor.functionNamePlaceholder')}
                     />
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                     <div>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>DBMS</label>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{t('editor.dbms')}</label>
                         <MultiSelect
                             options={dbmsOptions}
                             value={selectedDbms}
                             onChange={setSelectedDbms}
-                            placeholder="Select DBMS..."
+                            placeholder={t('editor.selectDbms')}
                             autoFocus={!isMobile}
                         />
                         {dbmsOptions.length === 0 && (
                             <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                                Configure options in <span style={{ textDecoration: 'underline', cursor: 'pointer' }} onClick={() => navigate('/settings')}>Settings</span>
+                                <span style={{ textDecoration: 'underline', cursor: 'pointer' }} onClick={() => navigate('/settings')}>{t('editor.configureInSettings')}</span>
                             </div>
                         )}
                     </div>
                     <div>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Tags</label>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{t('editor.tags')}</label>
                         <MultiSelect
                             options={tagsOptions}
                             value={selectedTags}
                             onChange={setSelectedTags}
-                            placeholder="Select Tags..."
+                            placeholder={t('editor.selectTags')}
                             autoFocus={!isMobile}
                         />
                         {tagsOptions.length === 0 && (
                             <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                                Configure options in <span style={{ textDecoration: 'underline', cursor: 'pointer' }} onClick={() => navigate('/settings')}>Settings</span>
+                                <span style={{ textDecoration: 'underline', cursor: 'pointer' }} onClick={() => navigate('/settings')}>{t('editor.configureInSettings')}</span>
                             </div>
                         )}
                     </div>
                 </div>
 
                 <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Description</label>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{t('editor.description')}</label>
                     <textarea
                         value={description}
                         onChange={e => setDescription(e.target.value)}
                         style={{ width: '100%', minHeight: '100px', resize: 'vertical' }}
-                        placeholder="What does this function do?"
+                        placeholder={t('editor.descriptionPlaceholder')}
                     />
                 </div>
 
                 <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Usage / Example</label>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{t('editor.usageExample')}</label>
                     <textarea
                         value={usage}
                         onChange={e => setUsage(e.target.value)}
@@ -196,7 +198,7 @@ export const FunctionEditor: React.FC = () => {
                             color: '#c9d1d9',
                             lineHeight: '1.6'
                         }}
-                        placeholder="SELECT ..."
+                        placeholder={t('editor.usagePlaceholder')}
                         spellCheck={false}
                     />
                 </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { X, Check, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLanguage } from '../i18n';
 
 interface MultiSelectProps {
     options: string[];
@@ -12,6 +13,7 @@ interface MultiSelectProps {
 }
 
 export const MultiSelect: React.FC<MultiSelectProps> = ({ options, value, onChange, placeholder = 'Select...', autoFocus = true }) => {
+    const { t } = useLanguage();
     const [isOpen, setIsOpen] = useState(false);
     const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
@@ -176,7 +178,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({ options, value, onChan
                                 type="text"
                                 value={filter}
                                 onChange={(e) => setFilter(e.target.value)}
-                                placeholder="Filter options..."
+                                placeholder={t('multiselect.filterOptions')}
                                 style={{
                                     width: '100%',
                                     padding: '0.5rem',
@@ -197,7 +199,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({ options, value, onChan
                         }}>
                             {filteredOptions.length === 0 ? (
                                 <div style={{ padding: '0.5rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-                                    No options found
+                                    {t('multiselect.noOptions')}
                                 </div>
                             ) : (
                                 filteredOptions.map(option => (

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Search, ChevronRight } from 'lucide-react';
 import { MultiSelect } from './MultiSelect';
 import { TagSelectorModal } from './TagSelectorModal';
+import { useLanguage } from '../i18n';
 
 interface SearchFilterProps {
     searchName: string;
@@ -12,8 +13,8 @@ interface SearchFilterProps {
     selectedTags: string[];
     onTagsChange: (value: string[]) => void;
     tagOptions: string[];
-    isMobile?: boolean; // To control autoFocus
-    layout?: 'row' | 'column'; // New prop for layout direction
+    isMobile?: boolean;
+    layout?: 'row' | 'column';
     className?: string;
 }
 
@@ -31,6 +32,7 @@ export const SearchFilter: React.FC<SearchFilterProps> = ({
     className
 }) => {
     const [isTagModalOpen, setIsTagModalOpen] = useState(false);
+    const { t } = useLanguage();
 
     return (
         <>
@@ -45,10 +47,10 @@ export const SearchFilter: React.FC<SearchFilterProps> = ({
                     <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
                     <input
                         type="text"
-                        placeholder="Search by function name..."
+                        placeholder={t('search.placeholder')}
                         value={searchName}
                         onChange={(e) => onSearchNameChange(e.target.value)}
-                        autoFocus={!isMobile} // Specific requirement: No autoFocus on mobile
+                        autoFocus={!isMobile}
                         style={{
                             width: '100%',
                             padding: '0.75rem 0.75rem 0.75rem 40px',
@@ -63,19 +65,19 @@ export const SearchFilter: React.FC<SearchFilterProps> = ({
 
                 {/* DBMS Filter */}
                 <div style={{ flex: layout === 'row' ? 1 : 'auto' }}>
-                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>DBMS</label>
+                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>{t('search.dbms')}</label>
                     <MultiSelect
                         options={dbmsOptions}
                         value={selectedDbms}
                         onChange={onDbmsChange}
-                        placeholder="Select DBMS..."
+                        placeholder={t('editor.selectDbms')}
                         autoFocus={!isMobile}
                     />
                 </div>
 
                 {/* Tags Filter */}
                 <div style={{ flex: layout === 'row' ? 1 : 'auto' }}>
-                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Tags</label>
+                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>{t('search.tags')}</label>
                     {isMobile ? (
                         <button
                             onClick={() => setIsTagModalOpen(true)}
@@ -95,7 +97,7 @@ export const SearchFilter: React.FC<SearchFilterProps> = ({
                             }}
                         >
                             <span style={{ color: selectedTags.length > 0 ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
-                                {selectedTags.length > 0 ? `${selectedTags.length} selected` : 'Select Tags...'}
+                                {selectedTags.length > 0 ? `${selectedTags.length} ${t('search.selected')}` : t('editor.selectTags')}
                             </span>
                             <ChevronRight size={16} color="var(--text-secondary)" />
                         </button>
@@ -104,7 +106,7 @@ export const SearchFilter: React.FC<SearchFilterProps> = ({
                             options={tagOptions}
                             value={selectedTags}
                             onChange={onTagsChange}
-                            placeholder="Select Tags..."
+                            placeholder={t('editor.selectTags')}
                             autoFocus={!isMobile}
                         />
                     )}
