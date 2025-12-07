@@ -1,3 +1,4 @@
+import { OnboardingModal } from './components/OnboardingModal';
 import { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Layout } from './Layout';
@@ -28,14 +29,17 @@ function App() {
   }, [user]);
 
   return (
-    <Routes>
-      <Route path="/" element={<Layout />}>
-        <Route index element={<FunctionList />} />
-        <Route path="new" element={<FunctionEditor />} />
-        <Route path="edit/:id" element={<FunctionEditor />} />
-        <Route path="settings" element={<Settings />} />
-      </Route>
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<FunctionList />} />
+          <Route path="new" element={<FunctionEditor />} />
+          <Route path="edit/:id" element={<FunctionEditor />} />
+          <Route path="settings" element={<Settings />} />
+        </Route>
+      </Routes>
+      <OnboardingModal />
+    </>
   );
 }
 

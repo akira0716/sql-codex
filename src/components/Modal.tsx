@@ -7,9 +7,10 @@ interface ModalProps {
     onClose: () => void;
     title: string;
     children: React.ReactNode;
+    maxWidth?: string;
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, maxWidth = '800px' }) => {
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose();
@@ -57,7 +58,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
                             borderRadius: '8px',
                             border: '1px solid var(--border-color)',
                             width: '100%',
-                            maxWidth: '800px',
+                            maxWidth: maxWidth,
                             maxHeight: '90vh',
                             display: 'flex',
                             flexDirection: 'column',
