@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { X, Check, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -12,6 +13,8 @@ interface MultiSelectProps {
 
 export const MultiSelect: React.FC<MultiSelectProps> = ({ options, value, onChange, placeholder = 'Select...', autoFocus = true }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+
     const [filter, setFilter] = useState('');
     const containerRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -50,6 +53,42 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({ options, value, onChan
         opt.toLowerCase().includes(filter.toLowerCase())
     );
 
+    useEffect(() => {
+        if (isOpen && containerRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            setDropdownStyle({
+                position: 'fixed',
+                top: `${rect.bottom + 4}px`,
+                left: `${rect.left}px`,
+                width: `${rect.width}px`,
+                zIndex: 9999, // Ensure it's above everything including modals
+            });
+        }
+    }, [isOpen]);
+
+    // Use a Portal to render the dropdown outside the current DOM hierarchy
+    // This requires a portal root in index.html or creating one dynamically, 
+    // but for simplicity here we can just render fixed. 
+    // Actually, pure fixed without portal works if no parent has transform/filter.
+    // Given the modal uses transform, we probably need a Portal or ensure fixed works.
+    // Let's try pure fixed first, but if the modal has transform, fixed will be relative to it.
+    // The Modal uses framer-motion which often applies transform.
+    // SAFE BET: Use React Portal.
+
+    // START PORTAL IMPLEMENTATION
+    const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
+    useEffect(() => {
+        let el = document.getElementById('dropdown-portal');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'dropdown-portal';
+            document.body.appendChild(el);
+        }
+        setPortalContainer(el);
+    }, []);
+
+    // ...
+
     return (
         <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
             <div
@@ -68,6 +107,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({ options, value, onChan
                     transition: 'border-color 0.2s'
                 }}
             >
+                {/* ... trigger content ... */}
                 {value.length === 0 && (
                     <span style={{ color: 'var(--text-secondary)', marginLeft: '0.25rem' }}>{placeholder}</span>
                 )}
@@ -109,23 +149,19 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({ options, value, onChan
                 </div>
             </div>
 
-            <AnimatePresence>
-                {isOpen && (
+            {/* Render Dropdown in Portal */}
+            {isOpen && portalContainer && ReactDOM.createPortal(
+                <AnimatePresence>
                     <motion.div
                         initial={{ opacity: 0, y: -10, height: 0 }}
                         animate={{ opacity: 1, y: 0, height: 'auto' }}
                         exit={{ opacity: 0, y: -10, height: 0 }}
                         transition={{ duration: 0.2 }}
                         style={{
-                            position: 'absolute',
-                            top: '100%',
-                            left: 0,
-                            right: 0,
-                            marginTop: '4px',
+                            ...dropdownStyle,
                             backgroundColor: 'var(--bg-tertiary)',
                             border: '1px solid var(--border-color)',
                             borderRadius: '4px',
-                            zIndex: 50,
                             maxHeight: '250px',
                             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                             display: 'flex',
@@ -192,8 +228,9 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({ options, value, onChan
                             )}
                         </div>
                     </motion.div>
-                )}
-            </AnimatePresence>
+                </AnimatePresence>,
+                portalContainer
+            )}
         </div>
     );
 };
