@@ -7,12 +7,14 @@ interface MultiSelectProps {
     value: string[];
     onChange: (value: string[]) => void;
     placeholder?: string;
+    autoFocus?: boolean;
 }
 
-export const MultiSelect: React.FC<MultiSelectProps> = ({ options, value, onChange, placeholder = 'Select...' }) => {
+export const MultiSelect: React.FC<MultiSelectProps> = ({ options, value, onChange, placeholder = 'Select...', autoFocus = true }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [filter, setFilter] = useState('');
     const containerRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -24,6 +26,12 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({ options, value, onChan
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    useEffect(() => {
+        if (isOpen && autoFocus && inputRef.current) {
+            inputRef.current.focus();
+        }
+    }, [isOpen, autoFocus]);
 
     const toggleOption = (option: string) => {
         if (value.includes(option)) {
@@ -118,16 +126,17 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({ options, value, onChan
                             border: '1px solid var(--border-color)',
                             borderRadius: '4px',
                             zIndex: 50,
-                            maxHeight: '250px', // Increased slightly to accommodate header
+                            maxHeight: '250px',
                             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                             display: 'flex',
                             flexDirection: 'column',
-                            overflow: 'hidden' // Container clip
+                            overflow: 'hidden'
                         }}
                     >
                         {/* Sticky Header */}
                         <div style={{ flexShrink: 0, borderBottom: '1px solid var(--border-color)' }}>
                             <input
+                                ref={inputRef}
                                 type="text"
                                 value={filter}
                                 onChange={(e) => setFilter(e.target.value)}
@@ -141,14 +150,13 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({ options, value, onChan
                                     color: 'var(--text-primary)'
                                 }}
                                 onClick={(e) => e.stopPropagation()}
-                                autoFocus
                             />
                         </div>
 
                         {/* Scrollable Content */}
                         <div style={{
                             overflowY: 'auto',
-                            overscrollBehavior: 'contain', // Prevents parent scroll
+                            overscrollBehavior: 'contain',
                             flex: 1
                         }}>
                             {filteredOptions.length === 0 ? (

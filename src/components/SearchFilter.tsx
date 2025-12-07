@@ -65,6 +65,7 @@ export const SearchFilter: React.FC<SearchFilterProps> = ({
                     value={selectedDbms}
                     onChange={onDbmsChange}
                     placeholder="Select DBMS..."
+                    autoFocus={!isMobile}
                 />
             </div>
 
@@ -76,6 +77,7 @@ export const SearchFilter: React.FC<SearchFilterProps> = ({
                     value={selectedTags}
                     onChange={onTagsChange}
                     placeholder="Select Tags..."
+                    autoFocus={!isMobile}
                 />
             </div>
         </div>

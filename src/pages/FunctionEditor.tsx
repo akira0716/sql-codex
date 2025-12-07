@@ -22,6 +22,15 @@ export const FunctionEditor: React.FC = () => {
     // Auth context
     const { user } = useAuth();
 
+    // Mobile check
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     // Fetch options from DB
     const dbmsOptionsData = useLiveQuery(() => db.dbms_options.toArray());
     const tagOptionsData = useLiveQuery(() => db.tag_options.toArray());
@@ -139,6 +148,7 @@ export const FunctionEditor: React.FC = () => {
                             value={selectedDbms}
                             onChange={setSelectedDbms}
                             placeholder="Select DBMS..."
+                            autoFocus={!isMobile}
                         />
                         {dbmsOptions.length === 0 && (
                             <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
@@ -153,6 +163,7 @@ export const FunctionEditor: React.FC = () => {
                             value={selectedTags}
                             onChange={setSelectedTags}
                             placeholder="Select Tags..."
+                            autoFocus={!isMobile}
                         />
                         {tagsOptions.length === 0 && (
                             <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
