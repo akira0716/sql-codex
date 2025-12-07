@@ -337,7 +337,7 @@ export function FunctionList() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                         <div>
                             <h3 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('library.description')}</h3>
-                            <p style={{ lineHeight: '1.6' }}>{selectedFunction.description}</p>
+                            <p style={{ lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{selectedFunction.description}</p>
                         </div>
 
                         <div>
