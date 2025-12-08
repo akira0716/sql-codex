@@ -81,7 +81,16 @@ async function syncFunctions(userId: string) {
                 continue;
             }
 
-            // Otherwise apply update from cloud (latest wins or merging logic - here simply applying cloud)
+            // TIMESTAMP COMPARISON: Only update if cloud is newer than local
+            const cloudTime = new Date(cf.updated_at).getTime();
+            const localTime = localFunc.updatedAt.getTime();
+            if (localTime > cloudTime) {
+                // Local is newer, skip cloud update
+                console.log(`Skipping cloud update for ${cf.name}: local is newer`);
+                continue;
+            }
+
+            // Apply update from cloud (cloud is newer or same time)
             await db.functions.update(localFunc.id!, {
                 name: cf.name,
                 description: cf.description || '',
