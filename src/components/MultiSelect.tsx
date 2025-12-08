@@ -23,7 +23,12 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({ options, value, onChan
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+            const target = event.target as Node;
+            const portalEl = document.getElementById('dropdown-portal');
+            // Close only if click is outside both the container and the portal dropdown
+            const isOutsideContainer = containerRef.current && !containerRef.current.contains(target);
+            const isOutsidePortal = !portalEl || !portalEl.contains(target);
+            if (isOutsideContainer && isOutsidePortal) {
                 setIsOpen(false);
             }
         };
