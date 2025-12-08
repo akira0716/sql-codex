@@ -8,7 +8,7 @@ export const Layout: React.FC = () => {
     const location = useLocation();
     const { user, signOut, signInWithGoogle } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const { checkNavigation } = useUnsavedChanges();
+    const { confirmNavigation } = useUnsavedChanges();
     const navigate = useNavigate();
 
     const isActive = (path: string) => location.pathname === path;
@@ -24,9 +24,7 @@ export const Layout: React.FC = () => {
 
     const handleNavClick = (e: React.MouseEvent, to: string) => {
         e.preventDefault();
-        if (checkNavigation()) {
-            navigate(to);
-        }
+        confirmNavigation(() => navigate(to));
     };
 
     return (

@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { Save, ArrowLeft, Trash2 } from 'lucide-react';
 import { MultiSelect } from '../components/MultiSelect';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useAuth } from '../AuthContext';
 import { syncData } from '../sync';
 import { useLanguage } from '../i18n';
@@ -20,6 +21,7 @@ export const FunctionEditor: React.FC = () => {
 
     const [selectedDbms, setSelectedDbms] = useState<string[]>([]);
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     // Auth context
     const { user } = useAuth();
@@ -80,8 +82,14 @@ export const FunctionEditor: React.FC = () => {
         navigate('/');
     };
 
-    const handleDelete = async () => {
-        if (isEdit && id && confirm(t('editor.confirmDelete'))) {
+    const handleDelete = () => {
+        if (isEdit && id) {
+            setShowDeleteConfirm(true);
+        }
+    };
+
+    const confirmDelete = async () => {
+        if (isEdit && id) {
             // Soft delete
             await db.functions.update(Number(id), {
                 is_deleted: true,
@@ -93,6 +101,7 @@ export const FunctionEditor: React.FC = () => {
 
             navigate('/');
         }
+        setShowDeleteConfirm(false);
     };
 
     return (
@@ -203,6 +212,18 @@ export const FunctionEditor: React.FC = () => {
                     />
                 </div>
             </div>
+
+            {/* Delete Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={showDeleteConfirm}
+                title={t('dialog.deleteTitle')}
+                message={t('editor.confirmDelete')}
+                confirmText={t('dialog.delete')}
+                cancelText={t('dialog.cancel')}
+                onConfirm={confirmDelete}
+                onCancel={() => setShowDeleteConfirm(false)}
+                variant="danger"
+            />
         </div>
     );
 };

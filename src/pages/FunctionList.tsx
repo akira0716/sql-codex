@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Tag, Database, Edit2, Trash2 } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { SearchFilter } from '../components/SearchFilter';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useLanguage } from '../i18n';
 
 export function FunctionList() {
@@ -29,6 +30,7 @@ export function FunctionList() {
 
     const [selectedFunction, setSelectedFunction] = useState<SQLFunction | null>(null);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; id: number | null }>({ isOpen: false, id: null });
 
     // Save filters on change
     React.useEffect(() => {
@@ -83,11 +85,15 @@ export function FunctionList() {
 
     const handleDelete = async (e: React.MouseEvent, id: number) => {
         e.stopPropagation();
-        if (confirm(t('library.confirmDelete'))) {
-            // Soft Delete
-            await db.functions.update(id, { is_deleted: true, updatedAt: new Date() });
-            if (selectedFunction?.id === id) setSelectedFunction(null);
+        setDeleteConfirm({ isOpen: true, id });
+    };
+
+    const confirmDelete = async () => {
+        if (deleteConfirm.id) {
+            await db.functions.update(deleteConfirm.id, { is_deleted: true, updatedAt: new Date() });
+            if (selectedFunction?.id === deleteConfirm.id) setSelectedFunction(null);
         }
+        setDeleteConfirm({ isOpen: false, id: null });
     };
 
     const handleEdit = (e: React.MouseEvent, id: number) => {
@@ -447,6 +453,18 @@ export function FunctionList() {
                     </div>
                 </div>
             </Modal>
+
+            {/* Delete Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={deleteConfirm.isOpen}
+                title={t('dialog.deleteTitle')}
+                message={t('library.confirmDelete')}
+                confirmText={t('dialog.delete')}
+                cancelText={t('dialog.cancel')}
+                onConfirm={confirmDelete}
+                onCancel={() => setDeleteConfirm({ isOpen: false, id: null })}
+                variant="danger"
+            />
         </div>
     );
 }

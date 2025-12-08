@@ -1,26 +1,53 @@
 import { createContext, useContext, useState, type ReactNode, useCallback } from 'react';
+import { ConfirmDialog } from './components/ConfirmDialog';
+import { useLanguage } from './i18n';
 
 interface UnsavedChangesContextType {
     hasUnsavedChanges: boolean;
     setHasUnsavedChanges: (value: boolean) => void;
-    checkNavigation: () => boolean; // Returns true if navigation should proceed
+    confirmNavigation: (onConfirm: () => void) => void;
 }
 
 const UnsavedChangesContext = createContext<UnsavedChangesContextType | undefined>(undefined);
 
 export function UnsavedChangesProvider({ children }: { children: ReactNode }) {
+    const { t } = useLanguage();
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
 
-    const checkNavigation = useCallback(() => {
+    const confirmNavigation = useCallback((onConfirm: () => void) => {
         if (hasUnsavedChanges) {
-            return window.confirm('未保存の変更があります。このページを離れますか？');
+            setPendingNavigation(() => onConfirm);
+        } else {
+            onConfirm();
         }
-        return true;
     }, [hasUnsavedChanges]);
 
+    const handleConfirm = () => {
+        if (pendingNavigation) {
+            setHasUnsavedChanges(false);
+            pendingNavigation();
+        }
+        setPendingNavigation(null);
+    };
+
+    const handleCancel = () => {
+        setPendingNavigation(null);
+    };
+
     return (
-        <UnsavedChangesContext.Provider value={{ hasUnsavedChanges, setHasUnsavedChanges, checkNavigation }}>
+        <UnsavedChangesContext.Provider value={{ hasUnsavedChanges, setHasUnsavedChanges, confirmNavigation }}>
             {children}
+            <ConfirmDialog
+                isOpen={pendingNavigation !== null}
+                title={t('dialog.unsavedTitle')}
+                message={t('dialog.unsavedMessage')}
+                confirmText={t('dialog.leaveWithoutSaving')}
+                cancelText={t('dialog.stayOnPage')}
+                onConfirm={handleConfirm}
+                onCancel={handleCancel}
+                variant="warning"
+            />
         </UnsavedChangesContext.Provider>
     );
 }

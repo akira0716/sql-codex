@@ -95,6 +95,15 @@ const translations: Record<Language, Record<string, string>> = {
         'onboarding.next': 'Next',
         'onboarding.back': 'Back',
         'onboarding.start': 'Start',
+
+        // Dialogs
+        'dialog.deleteTitle': 'Delete Confirmation',
+        'dialog.delete': 'Delete',
+        'dialog.cancel': 'Cancel',
+        'dialog.unsavedTitle': 'Unsaved Changes',
+        'dialog.unsavedMessage': 'You have unsaved changes. Are you sure you want to leave?',
+        'dialog.leaveWithoutSaving': 'Leave without saving',
+        'dialog.stayOnPage': 'Stay on page',
     },
     ja: {
         // Settings
@@ -182,6 +191,15 @@ const translations: Record<Language, Record<string, string>> = {
         'onboarding.next': '次へ',
         'onboarding.back': '戻る',
         'onboarding.start': '始める',
+
+        // Dialogs
+        'dialog.deleteTitle': '削除の確認',
+        'dialog.delete': '削除',
+        'dialog.cancel': 'キャンセル',
+        'dialog.unsavedTitle': '未保存の変更',
+        'dialog.unsavedMessage': '未保存の変更があります。このページを離れますか？',
+        'dialog.leaveWithoutSaving': '保存せずに移動',
+        'dialog.stayOnPage': 'このページにとどまる',
     }
 };
 
